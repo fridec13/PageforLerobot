@@ -7,15 +7,23 @@ const SignupForm = () => {
     password: ''
   });
 
+  const [message, setMessage] = setState('');
+
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('회원가입 데이터:', formData);
-    // TODO: Spring Boot로 POST 요청 보내기
+    try{
+      const result = await signupUser(formData);
+      console.log('회원가입 성공:',result);
+      setMessage('회원가입에 성공했습니다.');
+    } catch (error) {
+      setMessage('회원가입에 실패했습니다: ' + (error.response?.data || error.message));
+    }
   };
 
   return (
@@ -51,6 +59,7 @@ const SignupForm = () => {
         />
       </div>
       <button type="submit">회원가입</button>
+      {message && <p>{message}</p>}
     </form>
   );
 };
