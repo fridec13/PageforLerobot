@@ -11,3 +11,8 @@ export const signupUser = async (userData) => {
         throw error;
     }
 }
+
+export const fetchMyProfile = async () => {
+    const { data } = await api.get('/api/users/me');
+    return data;  // { id, username, email, ... }
+  };
