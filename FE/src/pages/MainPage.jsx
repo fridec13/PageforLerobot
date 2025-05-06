@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 
 const HomePage = () => (
   <div className="max-w-2xl mx-auto p-8 text-center">
-    <h1 className="text-3xl font-bold mb-4">재민's Portfolio 🚀</h1>
+    <h1 className="text-3xl font-bold mb-4"> 님 환영합니다!</h1>
     <p className="mb-8">
       Lerobot 메인페이지 인데요?
     </p>
