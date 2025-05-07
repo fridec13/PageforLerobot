@@ -1,0 +1,41 @@
+# Node modules
+node_modules/
+
+# Build directories
+.next/
+out/
+build/
+dist/
+
+# Cache directories
+.swc/
+.cache/
+
+# Environment files
+.env*
+
+# Log files
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE/Editor directories
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# TypeScript
+*.tsbuildinfo
+
+# Package lock files (optional, but can be large)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml 
