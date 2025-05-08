@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Search, Plus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { useAuthStore } from "@/lib/store/authStore"
+import { useAuthStore } from "@/lib/auth"
 
 interface WikiLayoutProps {
   children: React.ReactNode

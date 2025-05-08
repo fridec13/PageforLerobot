@@ -1,0 +1,99 @@
+{
+  "projectRules": {
+    "routing": {
+      "appRouter": {
+        "guidelines": [
+          "Next.js 15에서는 같은 레벨에 동적 라우트와 일반 라우트가 공존할 수 없습니다.",
+          "계층 구조는 최대 2단계로 제한합니다. (더 복잡한 구조는 중첩 폴더 구성)",
+          "catch-all 라우트([...path])는 특별한 이유 없이 사용하지 않습니다. 일반 동적 라우트([id] 또는 [slug])를 선호합니다.",
+          "모든 주요 기능은 일관된 폴더 구조를 유지합니다. (layout.tsx + page.tsx + 하위 폴더)"
+        ],
+        "examples": {
+          "correct": [
+            "app/docs/page.tsx + app/docs/layout.tsx + app/docs/[id]/page.tsx",
+            "app/api/docs/route.ts + app/api/docs/[id]/route.ts"
+          ],
+          "incorrect": [
+            "catch-all 라우트 사용: app/docs/[...path]/page.tsx",
+            "일관성 없는 구조: docs만 다른 패턴 사용"
+          ]
+        }
+      }
+    },
+    "naming": {
+      "files": {
+        "components": "PascalCase.tsx (예: Button.tsx)",
+        "pages": "kebab-case.tsx (예: user-profile.tsx)",
+        "api": "kebab-case.ts (예: user-auth.ts)",
+        "utils": "camelCase.ts (예: formatDate.ts)"
+      },
+      "functions": "camelCase (예: getUserData)",
+      "components": "PascalCase (예: UserProfile)",
+      "constants": "UPPER_SNAKE_CASE (예: MAX_ITEMS)"
+    },
+    "structure": {
+      "standardFolderStructure": {
+        "description": "모든 주요 기능은 일관된 폴더 구조를 따라야 합니다",
+        "pattern": [
+          "app/[기능명]/layout.tsx    # 해당 기능의 공통 레이아웃",
+          "app/[기능명]/page.tsx      # 기능의 메인 페이지",
+          "app/[기능명]/[id|slug]/    # 동적 라우트 (상세 페이지)",
+          "app/[기능명]/[id|slug]/edit/  # 중첩 동작 페이지"
+        ],
+        "examples": {
+          "auth": "app/auth/layout.tsx + app/auth/login/page.tsx + app/auth/register/page.tsx",
+          "wiki": "app/wiki/layout.tsx + app/wiki/page.tsx + app/wiki/[slug]/page.tsx",
+          "docs": "app/docs/layout.tsx + app/docs/page.tsx + app/docs/[id]/page.tsx (wiki와 동일 패턴)"
+        }
+      },
+      "apiRoutes": {
+        "default": "app/api/[기능명]/route.ts",
+        "withDynamicSegments": "app/api/[기능명]/[id]/route.ts"
+      }
+    }
+  },
+  "styleRules": {
+    "indent": "2 spaces",
+    "quotes": "single",
+    "semicolons": "always",
+    "trailingComma": "es5"
+  },
+  "implementationRules": {
+    "api": {
+      "mockPattern": "프론트엔드에서는 Mock API 패턴을 사용합니다. 실제 데이터 처리는 FastAPI 백엔드에서 수행합니다.",
+      "responsibilityDivision": {
+        "frontend": [
+          "타입 정의 및 인터페이스",
+          "Mock API 응답 구현", 
+          "상태 관리 및 UI 렌더링"
+        ],
+        "backend": [
+          "실제 데이터베이스 연동",
+          "비즈니스 로직 처리",
+          "인증 및 보안 처리"
+        ]
+      },
+      "errorHandling": "모든 API 라우트는 try-catch로 예외 처리 필수",
+      "responseFormat": "일관된 JSON 응답 형식 사용 (성공/에러 메시지 포함)"
+    },
+    "components": {
+      "props": "props 타입은 항상 interface로 정의",
+      "stateManagement": "전역 상태는 Zustand 또는 Context API 사용"
+    },
+    "typeDefinitions": {
+      "location": "lib/models/ 디렉토리에 도메인별 타입 정의",
+      "naming": "도메인명.ts (예: docs.ts, wiki.ts, auth.ts)"
+    },
+    "mockData": {
+      "location": "lib/mock-data/ 디렉토리에 도메인별 mock 데이터 정의",
+      "naming": "도메인명-data.ts (예: docs-data.ts, wiki-data.ts)"
+    }
+  },
+  "conflictResolution": {
+    "routingConflicts": [
+      "라우팅 충돌이 발생하면 Next.js 표준 패턴을 따라 구조 재구성",
+      "기능 관련 코드는 도메인별로 분리 (docs, wiki, auth 등)",
+      "API 경로 변경시 관련 클라이언트 코드도 함께 업데이트해야 합니다."
+    ]
+  }
+} 

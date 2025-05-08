@@ -1,0 +1,105 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# 코딩 스타일 가이드라인
+
+## 기본 코드 스타일
+
+- **들여쓰기**: 2 spaces
+- **따옴표**: single quotes (`'`)
+- **세미콜론**: 항상 사용
+- **trailing comma**: es5 스타일 (배열, 객체 마지막 항목)
+
+## 네이밍 컨벤션
+
+- **컴포넌트 파일**: PascalCase (예: `Button.tsx`, `UserProfile.tsx`)
+- **페이지 파일**: kebab-case (예: `user-profile.tsx`)
+- **API 파일**: kebab-case (예: `user-auth.ts`)
+- **유틸리티 파일**: camelCase (예: `formatDate.ts`)
+- **함수명**: camelCase (예: `getUserData()`, `fetchDocuments()`)
+- **컴포넌트명**: PascalCase (예: `UserProfile`, `Button`)
+- **상수**: UPPER_SNAKE_CASE (예: `MAX_ITEMS`, `DEFAULT_TIMEOUT`)
+- **변수명**: camelCase (예: `userData`, `isLoading`)
+- **boolean 변수**: `is`, `has`, `can` 등의 접두사 사용 (예: `isActive`, `hasPermission`)
+
+## React 컴포넌트 작성 규칙
+
+- props 타입은 항상 interface로 정의
+- 반복되는 스타일은 별도의 상수나 변수로 추출
+- 큰 컴포넌트는 작은 컴포넌트로 분리
+- 상태 관리는 필요한 경우에만 사용 (props가 더 간단한 경우 props 선호)
+
+```typescript
+// 좋은 예:
+interface ButtonProps {
+  variant?: 'primary' | 'secondary' | 'outline';
+  size?: 'sm' | 'md' | 'lg';
+  onClick?: () => void;
+  children: React.ReactNode;
+}
+
+export function Button({ 
+  variant = 'primary', 
+  size = 'md', 
+  onClick, 
+  children 
+}: ButtonProps) {
+  return (
+    <button 
+      className={`btn btn-${variant} btn-${size}`} 
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+```
+
+## 상태 관리
+
+- 지역 상태: React의 `useState` 사용
+- 컴포넌트 간 공유 상태: React Context API 사용
+- 전역 상태: Zustand 사용
+- 복잡한 폼: React Hook Form 사용
+
+## 주석 작성
+
+- 복잡한 로직이나 비즈니스 규칙에 주석 추가
+- TODO 주석은 이슈 번호와 함께 작성
+- 자명한 코드에는 주석 지양
+
+```typescript
+// 좋은 주석 예:
+// 사용자 권한에 따라 접근 가능한 메뉴 필터링
+const accessibleMenus = menus.filter(menu => {
+  return hasPermission(user.role, menu.requiredPermission);
+});
+
+// 나쁜 주석 예:
+// 버튼 클릭 핸들러
+const handleClick = () => {
+  // ...
+};
+```
+
+## 에러 처리
+
+- API 호출은 항상 try-catch로 감싸기
+- 사용자에게 적절한 에러 메시지 제공
+- 개발 환경에서는 상세 에러 로깅
+
+```typescript
+// 권장 패턴:
+try {
+  const data = await fetchData();
+  setData(data);
+} catch (error) {
+  console.error('데이터 로딩 오류:', error);
+  setError('데이터를 불러오는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
+} finally {
+  setLoading(false);
+}
+```
+

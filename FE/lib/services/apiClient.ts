@@ -1,7 +1,11 @@
 import axios from 'axios';
+import { useAuthStore } from '../auth';
 
 // 환경 변수에서 API URL을 가져오거나 기본값 사용
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+
+// 개발 서버 api url
+// const API_URL = 'http://localhost:8080/api';
 
 // Axios 인스턴스 생성
 const apiClient = axios.create({
@@ -14,9 +18,12 @@ const apiClient = axios.create({
 // 요청 인터셉터 설정 - 인증 토큰을 헤더에 추가
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('jwt');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+    // 브라우저 환경에서만 실행
+    if (typeof window !== 'undefined') {
+      const { token } = useAuthStore.getState();
+      if (token) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+      }
     }
     return config;
   },
@@ -37,9 +44,10 @@ apiClient.interceptors.response.use(
       
       try {
         // 토큰 만료 시 로그아웃 처리
-        localStorage.removeItem('jwt');
-        localStorage.removeItem('user');
-        window.location.href = '/auth/login';
+        if (typeof window !== 'undefined') {
+          useAuthStore.getState().logout();
+          window.location.href = '/auth/login';
+        }
         return Promise.reject(error);
       } catch (refreshError) {
         return Promise.reject(refreshError);

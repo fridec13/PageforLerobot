@@ -1,8 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { Header } from '@/components/layout/header'
-import { Sidebar } from '@/components/layout/sidebar'
-import { Providers } from './providers'
+import { ClientLayout } from '@/app/client-layout'
 
 export const metadata: Metadata = {
   title: 'RoboSSAFYens',
@@ -34,17 +32,9 @@ export default function RootLayout({
         />
       </head>
       <body className="font-pretendard">
-        <Providers>
-          <div className="flex flex-col h-screen overflow-hidden">
-            <Header />
-            <div className="flex flex-1 overflow-hidden">
-              <Sidebar />
-              <main className="flex-1 overflow-y-auto p-4">
-                {children}
-              </main>
-            </div>
-          </div>
-        </Providers>
+        <ClientLayout>
+          {children}
+        </ClientLayout>
       </body>
     </html>
   )

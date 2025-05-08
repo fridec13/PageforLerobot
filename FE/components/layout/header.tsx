@@ -3,7 +3,8 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { User, Bell, Menu, LogOut } from "lucide-react"
-import { useMemo } from "react"
+import { useMemo, useEffect } from "react"
+import { signOut } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -13,16 +14,32 @@ import { Separator } from "@/components/ui/separator"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
 import { cn } from "@/lib/utils"
 import React from "react"
-import { useAuthStore } from "@/lib/store/authStore"
+import { useAuth } from "@/lib/auth"
+import { SearchDialog } from "@/components/search/search-dialog"
+import { NotificationDropdown } from "@/components/notifications/notification-dropdown"
+import { useNotificationStore, requestNotificationPermission } from "@/lib/store/notificationStore"
 
 interface PathItem {
   label: string
   path: string
 }
 
-export function Header() {
+interface HeaderProps {
+  isMobileOpen: boolean;
+  setIsMobileOpen: (open: boolean) => void;
+}
+
+export function Header({ isMobileOpen, setIsMobileOpen }: HeaderProps) {
   const pathname = usePathname() || ""
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { user, isAuthenticated } = useAuth();
+  const { addNotification } = useNotificationStore();
+  
+  // 컴포넌트 마운트 시 알림 권한 요청
+  useEffect(() => {
+    if (isAuthenticated) {
+      requestNotificationPermission();
+    }
+  }, [isAuthenticated]);
   
   const currentPath = useMemo(() => {
     const pathSegments = pathname.split('/').filter(Boolean)
@@ -43,8 +60,9 @@ export function Header() {
     return pathItems
   }, [pathname])
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut({ redirect: false });
+    window.location.href = '/';
   };
 
   // 사용자 이름에서 이니셜 생성
@@ -57,17 +75,28 @@ export function Header() {
   };
 
   return (
-    <header className="bg-card border-b py-3 px-6 flex justify-between items-center sticky top-0 z-10 shadow-sm">
-      <div className="flex items-center space-x-2">
+    <header className="bg-card border-b py-3 px-4 md:px-6 flex justify-between items-center sticky top-0 z-20 shadow-sm">
+      <div className="flex items-center space-x-1 md:space-x-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="mr-1 lg:hidden"
+          onClick={() => setIsMobileOpen(true)}
+          aria-label="메뉴 열기"
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+      
         <Link href="/" className="font-bold text-xl flex items-center hover:opacity-90 transition-opacity">
-          <div className="bg-blue-500 text-white rounded-lg px-2 py-1 mr-2">R</div>
-          <span className="text-foreground">Robo<span className="text-blue-500">SSAFY</span>ens</span>
+          <div className="bg-blue-500 text-white rounded-lg px-2 py-1 mr-1 sm:mr-2">R</div>
+          <span className="text-foreground hidden xs:inline">Robo<span className="text-blue-500">SSAFY</span>ens</span>
         </Link>
+        
         {currentPath.length > 0 && (
-          <Breadcrumb className="ml-4">
+          <Breadcrumb className="ml-1 md:ml-4 hidden sm:flex">
             <BreadcrumbList>
               <BreadcrumbItem>
-                <BreadcrumbLink href="/">       HOME</BreadcrumbLink>
+                <BreadcrumbLink href="/">HOME</BreadcrumbLink>
               </BreadcrumbItem>
 
               {currentPath.map((item, index) => (
@@ -75,9 +104,11 @@ export function Header() {
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
                     {index === currentPath.length - 1 ? (
-                      <span className="font-medium">{item.label}</span>
+                      <span className="font-medium truncate max-w-[100px] md:max-w-none">{item.label}</span>
                     ) : (
-                      <BreadcrumbLink href={item.path}>{item.label}</BreadcrumbLink>
+                      <BreadcrumbLink href={item.path} className="truncate max-w-[80px] md:max-w-none">
+                        {item.label}
+                      </BreadcrumbLink>
                     )}
                   </BreadcrumbItem>
                 </React.Fragment>
@@ -86,46 +117,28 @@ export function Header() {
           </Breadcrumb>
         )}
       </div>
-      <div className="flex items-center space-x-2">
+      
+      <div className="flex items-center space-x-1 md:space-x-2">
+        {/* 검색 다이얼로그 */}
+        <SearchDialog />
+        
         {isAuthenticated ? (
           <>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-5 w-5" />
-                  <Badge className="absolute -top-1 -right-1 bg-destructive text-white text-xs h-4 w-4 flex items-center justify-center p-0">
-                    3
-                  </Badge>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-64 p-0" align="end">
-                <div className="font-medium px-3 py-2 border-b">알림</div>
-                <div className="divide-y">
-                  <div className="text-sm p-3 hover:bg-accent rounded cursor-pointer">
-                    관리자가 귀하의 문서 변경 요청을 승인했습니다.
-                  </div>
-                  <div className="text-sm p-3 hover:bg-accent rounded cursor-pointer">
-                    새로운 댓글이 작성되었습니다.
-                  </div>
-                  <div className="text-sm p-3 hover:bg-accent rounded cursor-pointer">
-                    칭호 '기여자'를 획득하셨습니다. 축하합니다!
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
+            {/* 알림 드롭다운 */}
+            <NotificationDropdown />
             
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="sm" className="gap-2">
                   <Avatar className="h-6 w-6">
-                    <AvatarImage src={user?.profileImage} />
+                    <AvatarImage src={user?.image || undefined} />
                     <AvatarFallback className="bg-blue-500 text-white text-xs">
-                      {user?.username ? getInitials(user.username) : "사용자"}
+                      {user?.name ? getInitials(user.name) : "사용자"}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="hidden md:inline">{user?.username || "사용자"}</span>
+                  <span className="hidden md:inline">{user?.name || "사용자"}</span>
                   {user?.title && (
-                    <Badge variant="outline" className="ml-1 text-xs">
+                    <Badge variant="outline" className="ml-1 text-xs hidden sm:inline-flex">
                       {user.title}
                     </Badge>
                   )}
@@ -155,14 +168,14 @@ export function Header() {
             </Popover>
           </>
         ) : (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 md:gap-2">
             <Link href="/auth/login">
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" className="text-xs md:text-sm">
                 로그인
               </Button>
             </Link>
             <Link href="/auth/register">
-              <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600">
+              <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 text-xs md:text-sm">
                 회원가입
               </Button>
             </Link>

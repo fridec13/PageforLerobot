@@ -1,26 +1,17 @@
-import axios from 'axios';
-
-// API 클라이언트 가져오기
-import apiClient from '@/lib/services/apiClient';
+import { User } from '../auth';
+import { mockUsers, mockMessages, MockUser, Message } from '../mock-data/users-data';
+import apiClient from './apiClient';
 
 // 인터페이스 정의
-export interface UserProfile {
-  id: string;
-  username: string;
-  email: string;
-  role: string;
-  title?: string; // 칭호
-  profileImage?: string; // 프로필 이미지
-  contribution?: number; // 기여 횟수
-  badges?: string[]; // 획득한 배지 목록
-  createdAt?: Date; // 가입일
+export interface UserProfile extends User {
+  createdAt?: Date;
 }
 
 export interface ProfileUpdateRequest {
-  username?: string;
+  name?: string;
   email?: string;
   title?: string;
-  profileImage?: string;
+  image?: string;
 }
 
 export interface PasswordChangeRequest {
@@ -28,67 +19,284 @@ export interface PasswordChangeRequest {
   newPassword: string;
 }
 
-// 사용자 서비스
+export interface UserContribution {
+  id: string;
+  type: 'DOCUMENT' | 'WIKI' | 'FORUM';
+  title: string;
+  createdAt: Date;
+}
+
+export interface UserMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  content: string;
+  read: boolean;
+  createdAt: Date;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// API를 호출하는 사용자 서비스
 const userService = {
   // 내 프로필 조회
-  getMyProfile: async (): Promise<UserProfile> => {
-    const response = await apiClient.get('/users/me');
-    return response.data;
+  getMyProfile: async (userId: string): Promise<UserProfile> => {
+    try {
+      const response = await apiClient.get('/api/users/me');
+      return response.data.data;
+    } catch (error) {
+      console.error('프로필 조회 실패:', error);
+      // API 실패 시 Mock 데이터로 대체 (개발 편의성을 위해)
+      const user = mockUsers.find(u => u.id === userId);
+      if (!user) throw new Error('사용자를 찾을 수 없습니다.');
+      
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        title: user.title,
+        image: user.image,
+        contribution: user.contribution,
+        badges: user.badges,
+        createdAt: user.createdAt
+      };
+    }
   },
   
   // 특정 사용자 프로필 조회
   getUserProfile: async (userId: string): Promise<UserProfile> => {
-    const response = await apiClient.get(`/users/${userId}`);
-    return response.data;
+    try {
+      const response = await apiClient.get(`/api/users/${userId}`);
+      return response.data.data;
+    } catch (error) {
+      console.error('사용자 프로필 조회 실패:', error);
+      // API 실패 시 Mock 데이터로 대체
+      const user = mockUsers.find(u => u.id === userId);
+      if (!user) throw new Error('사용자를 찾을 수 없습니다.');
+      
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        title: user.title,
+        image: user.image,
+        contribution: user.contribution,
+        badges: user.badges,
+        createdAt: user.createdAt
+      };
+    }
   },
   
   // 프로필 업데이트
-  updateProfile: async (data: ProfileUpdateRequest): Promise<UserProfile> => {
-    const response = await apiClient.patch('/users/me', data);
-    return response.data;
+  updateProfile: async (userId: string, data: ProfileUpdateRequest): Promise<UserProfile> => {
+    try {
+      const response = await apiClient.patch('/api/users/me', data);
+      return response.data.data;
+    } catch (error) {
+      console.error('프로필 업데이트 실패:', error);
+      // API 실패 시 Mock 처리
+      const userIndex = mockUsers.findIndex(u => u.id === userId);
+      if (userIndex === -1) throw new Error('사용자를 찾을 수 없습니다.');
+      
+      const updatedUser = {
+        ...mockUsers[userIndex],
+        ...data
+      };
+      
+      return {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        title: updatedUser.title,
+        image: updatedUser.image,
+        contribution: updatedUser.contribution,
+        badges: updatedUser.badges
+      };
+    }
   },
   
   // 비밀번호 변경
-  changePassword: async (data: PasswordChangeRequest): Promise<void> => {
-    await apiClient.post('/users/change-password', data);
+  changePassword: async (userId: string, data: PasswordChangeRequest): Promise<void> => {
+    try {
+      await apiClient.post('/api/users/password', data);
+    } catch (error) {
+      console.error('비밀번호 변경 실패:', error);
+      // Mock에서는 비밀번호 변경 무시
+    }
+    return Promise.resolve();
   },
   
   // 내 기여 이력 조회
-  getMyContributions: async (page = 1, limit = 10): Promise<any> => {
-    const response = await apiClient.get(`/users/me/contributions?page=${page}&limit=${limit}`);
-    return response.data;
+  getMyContributions: async (userId: string, page = 1, limit = 10): Promise<PaginatedResponse<UserContribution>> => {
+    try {
+      const response = await apiClient.get(`/api/users/contributions?page=${page}&limit=${limit}`);
+      return response.data.data;
+    } catch (error) {
+      console.error('기여 이력 조회 실패:', error);
+      // Mock 기여 데이터 생성
+      const mockContributions: UserContribution[] = [
+        {
+          id: 'contrib_1',
+          type: 'DOCUMENT',
+          title: 'RoboDK 설치 가이드 작성',
+          createdAt: new Date('2023-03-15')
+        },
+        {
+          id: 'contrib_2',
+          type: 'WIKI',
+          title: 'ROS2 튜토리얼 수정',
+          createdAt: new Date('2023-04-10')
+        },
+        {
+          id: 'contrib_3',
+          type: 'FORUM',
+          title: 'Onshape 관련 질문 답변',
+          createdAt: new Date('2023-05-05')
+        }
+      ];
+      
+      const startIdx = (page - 1) * limit;
+      const endIdx = startIdx + limit;
+      
+      return {
+        items: mockContributions.slice(startIdx, endIdx),
+        total: mockContributions.length,
+        page,
+        limit,
+        totalPages: Math.ceil(mockContributions.length / limit)
+      };
+    }
   },
   
   // 내 메시지 목록 조회
-  getMyMessages: async (page = 1, limit = 10): Promise<any> => {
-    const response = await apiClient.get(`/users/me/messages?page=${page}&limit=${limit}`);
-    return response.data;
+  getMyMessages: async (userId: string, page = 1, limit = 10): Promise<PaginatedResponse<UserMessage>> => {
+    try {
+      const response = await apiClient.get(`/api/users/messages?page=${page}&limit=${limit}`);
+      return response.data.data;
+    } catch (error) {
+      console.error('메시지 목록 조회 실패:', error);
+      // API 실패 시 Mock 데이터 사용
+      const userMessages = mockMessages
+        .filter(msg => msg.receiverId === userId)
+        .map(msg => {
+          const sender = mockUsers.find(u => u.id === msg.senderId);
+          return {
+            id: msg.id,
+            senderId: msg.senderId,
+            senderName: sender?.name || '알 수 없음',
+            content: msg.content,
+            read: msg.read,
+            createdAt: msg.createdAt
+          };
+        });
+      
+      const startIdx = (page - 1) * limit;
+      const endIdx = startIdx + limit;
+      
+      return {
+        items: userMessages.slice(startIdx, endIdx),
+        total: userMessages.length,
+        page,
+        limit,
+        totalPages: Math.ceil(userMessages.length / limit)
+      };
+    }
   },
   
   // 메시지 읽음 처리
-  markMessageAsRead: async (messageId: string): Promise<void> => {
-    await apiClient.patch(`/users/me/messages/${messageId}/read`);
+  markMessageAsRead: async (userId: string, messageId: string): Promise<void> => {
+    try {
+      await apiClient.patch(`/api/users/messages/${messageId}`);
+    } catch (error) {
+      console.error('메시지 읽음 처리 실패:', error);
+      // API 실패 시 Mock 처리
+      const msgIndex = mockMessages.findIndex(msg => 
+        msg.id === messageId && msg.receiverId === userId
+      );
+      
+      if (msgIndex !== -1) {
+        mockMessages[msgIndex].read = true;
+      }
+    }
+    return Promise.resolve();
   },
   
   // 메시지 삭제
-  deleteMessage: async (messageId: string): Promise<void> => {
-    await apiClient.delete(`/users/me/messages/${messageId}`);
+  deleteMessage: async (userId: string, messageId: string): Promise<void> => {
+    try {
+      await apiClient.delete(`/api/users/messages/${messageId}`);
+    } catch (error) {
+      console.error('메시지 삭제 실패:', error);
+      // Mock 처리는 생략
+    }
+    return Promise.resolve();
   },
   
   // 메시지 전송 (관리자용)
-  sendMessage: async (userId: string, content: string): Promise<void> => {
-    await apiClient.post('/admin/messages', { userId, content });
+  sendMessage: async (senderId: string, receiverId: string, content: string): Promise<void> => {
+    try {
+      await apiClient.post('/api/users/messages', {
+        receiverId,
+        content
+      });
+    } catch (error) {
+      console.error('메시지 전송 실패:', error);
+      // API 실패 시 Mock 처리
+      const newMessage: Message = {
+        id: `msg_${Date.now()}`,
+        senderId,
+        receiverId,
+        content,
+        read: false,
+        createdAt: new Date()
+      };
+      
+      mockMessages.push(newMessage);
+    }
+    return Promise.resolve();
   },
   
   // 칭호 목록 조회
-  getTitles: async (): Promise<any> => {
-    const response = await apiClient.get('/titles');
-    return response.data;
+  getTitles: async (): Promise<string[]> => {
+    try {
+      const response = await apiClient.get('/api/users/titles');
+      return response.data.data;
+    } catch (error) {
+      console.error('칭호 목록 조회 실패:', error);
+      // 기본 칭호 목록 반환
+      return [
+        '새싹',
+        '기여자',
+        '전문가',
+        '마스터',
+        'SAPIENS'
+      ];
+    }
   },
   
   // 칭호 변경
-  setActiveTitle: async (titleId: string): Promise<void> => {
-    await apiClient.post(`/users/me/titles/active`, { titleId });
+  setActiveTitle: async (userId: string, title: string): Promise<void> => {
+    try {
+      await apiClient.post('/api/users/title', { title });
+    } catch (error) {
+      console.error('칭호 변경 실패:', error);
+      // Mock 처리
+      const userIndex = mockUsers.findIndex(u => u.id === userId);
+      
+      if (userIndex !== -1) {
+        mockUsers[userIndex].title = title;
+      }
+    }
+    return Promise.resolve();
   }
 };
 

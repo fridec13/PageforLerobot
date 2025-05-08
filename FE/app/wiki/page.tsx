@@ -8,7 +8,7 @@ import { FileText, ArrowRight, Clock, Tags, Users, Star } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
-import { useAuthStore } from "@/lib/store/authStore"
+import { useAuthStore } from "@/lib/auth"
 import wikiService from "@/lib/services/wikiService"
 import { WikiDocument, Category } from "@/lib/models/wiki"
 

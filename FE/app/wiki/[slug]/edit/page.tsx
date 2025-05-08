@@ -12,9 +12,9 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, ChevronLeft, Save, Eye, ArrowLeft, Loader2 } from "lucide-react"
-import { useAuthStore } from "@/lib/store/authStore"
+import { useAuthStore } from "@/lib/auth"
 import wikiService from "@/lib/services/wikiService"
-import { WikiDocument, Category } from "@/lib/models/wiki"
+import { WikiDocument, Category, User as WikiUser } from "@/lib/models/wiki"
 
 export default function EditWikiPage() {
   const params = useParams()
@@ -148,7 +148,15 @@ export default function EditWikiPage() {
         slug: newSlug, // 슬러그가 변경된 경우
         content,
         categories: categoryObjects,
-        lastModifiedBy: user || undefined
+        lastModifiedBy: user ? {
+          id: user.id,
+          username: user.name || 'Unknown User',
+          email: user.email || '',
+          role: user.role,
+          title: user.title,
+          profileImage: user.image,
+          contributions: user.contribution
+        } : undefined
       }, editComment)
       
       // 성공 시 해당 문서 페이지로 이동

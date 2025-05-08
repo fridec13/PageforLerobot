@@ -3,7 +3,8 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useAuthStore } from '@/lib/store/authStore';
+import Image from 'next/image';
+import { useAuthStore } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,7 +34,7 @@ function LoginForm() {
   // 폼 제출 처리
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    clearError();
+    clearError && clearError();
     
     // 간단한 폼 유효성 검사
     if (!email || !password) {
@@ -51,13 +52,22 @@ function LoginForm() {
     setValidationError('');
     
     // 로그인 시도
-    await login({ email, password });
+    await login(email, password);
   };
 
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-8rem)]">
+    <div className="flex items-center justify-center min-h-[calc(100vh-16rem)]">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1">
+          <div className="flex flex-col items-center mb-6">
+            <Image 
+              src="/logo.svg" 
+              alt="RoboSSAFYens 로고" 
+              width={80} 
+              height={80}
+              priority
+            />
+          </div>
           <CardTitle className="text-2xl font-bold text-center">로그인</CardTitle>
           <CardDescription className="text-center">
             RoboSSAFYens에 로그인하여 로봇 지식을 공유해보세요.
@@ -89,7 +99,7 @@ function LoginForm() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">비밀번호</Label>
-                <Link href="#" className="text-xs text-blue-500 hover:underline">
+                <Link href="/auth/forgot-password" className="text-xs text-blue-500 hover:underline">
                   비밀번호 찾기
                 </Link>
               </div>
@@ -139,6 +149,10 @@ function LoginForm() {
               회원가입
             </Link>
           </div>
+          
+          <div className="text-center text-xs text-muted-foreground">
+            테스트 계정: admin@robossafyens.com / 1234
+          </div>
         </CardFooter>
       </Card>
     </div>
@@ -149,7 +163,7 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="flex items-center justify-center min-h-[calc(100vh-8rem)]">
+      <div className="flex items-center justify-center min-h-[calc(100vh-16rem)]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     }>

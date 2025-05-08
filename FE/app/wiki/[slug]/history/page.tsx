@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowLeft, Clock, AlertCircle, GitCompare, RotateCcw } from "lucide-react"
 import wikiService from "@/lib/services/wikiService"
 import { Revision, WikiDocument } from "@/lib/models/wiki"
-import { useAuthStore } from "@/lib/store/authStore"
+import { useAuthStore } from "@/lib/auth"
 
 export default function WikiHistoryPage() {
   const params = useParams()

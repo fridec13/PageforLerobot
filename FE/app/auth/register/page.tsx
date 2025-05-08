@@ -3,7 +3,8 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuthStore } from '@/lib/store/authStore';
+import Image from 'next/image';
+import { useAuthStore } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +12,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertCircle } from 'lucide-react';
+import apiClient from '@/lib/services/apiClient';
 
 // 라우터를 사용하는 컴포넌트를 분리
 function RegisterForm() {
@@ -20,9 +22,10 @@ function RegisterForm() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [validationError, setValidationError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   
   const router = useRouter();
-  const { register, isAuthenticated, isLoading, error, clearError } = useAuthStore();
+  const { isAuthenticated, error, clearError } = useAuthStore();
 
   // 이미 로그인한 경우 홈으로 리디렉션
   useEffect(() => {
@@ -68,20 +71,44 @@ function RegisterForm() {
     }
     
     setValidationError('');
+    setIsLoading(true);
     
     // 회원가입 시도
     try {
-      await register({ username, email, password });
-      router.push('/auth/login?registered=true');
-    } catch (error) {
-      // 에러는 이미 스토어에서 처리됨
+      const response = await apiClient.post('/api/auth/register', {
+        name: username,
+        email,
+        password,
+        confirmPassword
+      });
+      
+      if (response.data.success) {
+        // 회원가입 성공 메시지와 함께 로그인 페이지로 이동
+        router.push('/auth/login?registered=true');
+      } else {
+        setValidationError(response.data.error || '회원가입 처리 중 오류가 발생했습니다.');
+      }
+    } catch (error: any) {
+      setValidationError(error.response?.data?.error || '회원가입 중 오류가 발생했습니다.');
+      console.error('Registration error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-8rem)]">
+    <div className="flex items-center justify-center min-h-[calc(100vh-16rem)]">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1">
+          <div className="flex flex-col items-center mb-6">
+            <Image 
+              src="/logo.svg" 
+              alt="RoboSSAFYens 로고" 
+              width={80} 
+              height={80}
+              priority
+            />
+          </div>
           <CardTitle className="text-2xl font-bold text-center">회원가입</CardTitle>
           <CardDescription className="text-center">
             RoboSSAFYens에 가입하여 로봇 지식 공유 커뮤니티에 참여하세요.
@@ -198,7 +225,7 @@ function RegisterForm() {
 export default function RegisterPage() {
   return (
     <Suspense fallback={
-      <div className="flex items-center justify-center min-h-[calc(100vh-8rem)]">
+      <div className="flex items-center justify-center min-h-[calc(100vh-16rem)]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     }>

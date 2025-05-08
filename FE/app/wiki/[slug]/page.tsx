@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { Edit, History, MessageSquare } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { useAuthStore } from "@/lib/store/authStore"
+import { useAuthStore } from "@/lib/auth"
 import wikiService from "@/lib/services/wikiService"
 import { WikiDocument } from "@/lib/models/wiki"
 

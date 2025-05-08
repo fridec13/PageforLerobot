@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useAuthStore } from "@/lib/store/authStore"
+import { useAuthStore } from "@/lib/auth"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import wikiService from "@/lib/services/wikiService"
-import { Category } from "@/lib/models/wiki"
+import { Category, User as WikiUser } from "@/lib/models/wiki"
 
 export default function CreateWikiPage() {
   const router = useRouter()
@@ -109,7 +109,15 @@ export default function CreateWikiPage() {
         slug,
         content,
         categories: categoryObjects,
-        createdBy: user || undefined
+        createdBy: user ? {
+          id: user.id,
+          username: user.name || 'Unknown User',
+          email: user.email || '',
+          role: user.role,
+          title: user.title,
+          profileImage: user.image,
+          contributions: user.contribution
+        } : undefined
       })
       
       // 성공 시 해당 문서 페이지로 이동
