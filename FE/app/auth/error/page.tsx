@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,8 @@ const errorMessages: Record<string, string> = {
   Default: '인증 중 오류가 발생했습니다.',
 };
 
-export default function AuthErrorPage() {
+// useSearchParams를 사용하는 컴포넌트를 별도로 분리
+function ErrorContent() {
   const searchParams = useSearchParams();
   const [errorType, setErrorType] = useState<string>('Default');
 
@@ -59,5 +60,18 @@ export default function AuthErrorPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// 메인 페이지 컴포넌트에서 Suspense로 감싸기
+export default function AuthErrorPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center items-center min-h-[70vh] p-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    }>
+      <ErrorContent />
+    </Suspense>
   );
 } 
