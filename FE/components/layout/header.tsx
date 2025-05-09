@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { User, Bell, Menu, LogOut } from "lucide-react"
 import { useMemo, useEffect } from "react"
-import { signOut } from "next-auth/react"
+import { useAuthStore } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -32,6 +32,7 @@ interface HeaderProps {
 export function Header({ isMobileOpen, setIsMobileOpen }: HeaderProps) {
   const pathname = usePathname() || ""
   const { user, isAuthenticated } = useAuth();
+  const logout = useAuthStore(state => state.logout);
   const { addNotification } = useNotificationStore();
   
   // 컴포넌트 마운트 시 알림 권한 요청
@@ -60,8 +61,8 @@ export function Header({ isMobileOpen, setIsMobileOpen }: HeaderProps) {
     return pathItems
   }, [pathname])
 
-  const handleLogout = async () => {
-    await signOut({ redirect: false });
+  const handleLogout = () => {
+    logout();
     window.location.href = '/';
   };
 

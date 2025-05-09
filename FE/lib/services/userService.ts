@@ -1,5 +1,5 @@
-import { User } from '../auth';
-import { mockUsers, mockMessages, MockUser, Message } from '../mock-data/users-data';
+import { User, useAuthStore } from '../auth';
+import { mockUsers, mockMessages, mockContributions, mockTitles, MockUser, Message } from '../mock-data/users-data';
 import apiClient from './apiClient';
 
 // 인터페이스 정의
@@ -43,6 +43,15 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
+// 현재 인증된 사용자의 ID 가져오기
+const getCurrentUserId = (): string | null => {
+  if (typeof window !== 'undefined') {
+    const { user } = useAuthStore.getState();
+    return user?.id || null;
+  }
+  return null;
+};
+
 // API를 호출하는 사용자 서비스
 const userService = {
   // 내 프로필 조회
@@ -53,7 +62,12 @@ const userService = {
     } catch (error) {
       console.error('프로필 조회 실패:', error);
       // API 실패 시 Mock 데이터로 대체 (개발 편의성을 위해)
-      const user = mockUsers.find(u => u.id === userId);
+      
+      // 현재 로그인한 사용자 정보가 있으면 해당 정보 사용
+      const currentUserId = getCurrentUserId();
+      const actualUserId = currentUserId || userId;
+      
+      const user = mockUsers.find(u => u.id === actualUserId);
       if (!user) throw new Error('사용자를 찾을 수 없습니다.');
       
       return {
@@ -103,13 +117,24 @@ const userService = {
     } catch (error) {
       console.error('프로필 업데이트 실패:', error);
       // API 실패 시 Mock 처리
-      const userIndex = mockUsers.findIndex(u => u.id === userId);
+      
+      // 현재 로그인한 사용자 정보가 있으면 해당 정보 사용
+      const currentUserId = getCurrentUserId();
+      const actualUserId = currentUserId || userId;
+      
+      const userIndex = mockUsers.findIndex(u => u.id === actualUserId);
       if (userIndex === -1) throw new Error('사용자를 찾을 수 없습니다.');
       
       const updatedUser = {
         ...mockUsers[userIndex],
         ...data
       };
+      
+      // 실제 목 데이터 업데이트 (임시)
+      if (data.name) mockUsers[userIndex].name = data.name;
+      if (data.email) mockUsers[userIndex].email = data.email;
+      if (data.title) mockUsers[userIndex].title = data.title;
+      if (data.image) mockUsers[userIndex].image = data.image;
       
       return {
         id: updatedUser.id,
@@ -142,37 +167,27 @@ const userService = {
       return response.data.data;
     } catch (error) {
       console.error('기여 이력 조회 실패:', error);
-      // Mock 기여 데이터 생성
-      const mockContributions: UserContribution[] = [
-        {
-          id: 'contrib_1',
-          type: 'DOCUMENT',
-          title: 'RoboDK 설치 가이드 작성',
-          createdAt: new Date('2023-03-15')
-        },
-        {
-          id: 'contrib_2',
-          type: 'WIKI',
-          title: 'ROS2 튜토리얼 수정',
-          createdAt: new Date('2023-04-10')
-        },
-        {
-          id: 'contrib_3',
-          type: 'FORUM',
-          title: 'Onshape 관련 질문 답변',
-          createdAt: new Date('2023-05-05')
-        }
-      ];
+      
+      // 현재 로그인한 사용자 정보가 있으면 해당 정보 사용
+      const currentUserId = getCurrentUserId();
+      const actualUserId = currentUserId || userId;
+      
+      // Mock 기여 데이터 필터링
+      const userContributions = mockContributions
+        .filter(contrib => contrib.userId === actualUserId)
+        .map(({ id, type, title, createdAt }) => ({
+          id, type, title, createdAt
+        }));
       
       const startIdx = (page - 1) * limit;
       const endIdx = startIdx + limit;
       
       return {
-        items: mockContributions.slice(startIdx, endIdx),
-        total: mockContributions.length,
+        items: userContributions.slice(startIdx, endIdx),
+        total: userContributions.length,
         page,
         limit,
-        totalPages: Math.ceil(mockContributions.length / limit)
+        totalPages: Math.ceil(userContributions.length / limit)
       };
     }
   },
@@ -184,9 +199,14 @@ const userService = {
       return response.data.data;
     } catch (error) {
       console.error('메시지 목록 조회 실패:', error);
+      
+      // 현재 로그인한 사용자 정보가 있으면 해당 정보 사용
+      const currentUserId = getCurrentUserId();
+      const actualUserId = currentUserId || userId;
+      
       // API 실패 시 Mock 데이터 사용
       const userMessages = mockMessages
-        .filter(msg => msg.receiverId === userId)
+        .filter(msg => msg.receiverId === actualUserId)
         .map(msg => {
           const sender = mockUsers.find(u => u.id === msg.senderId);
           return {
@@ -218,9 +238,14 @@ const userService = {
       await apiClient.patch(`/api/users/messages/${messageId}`);
     } catch (error) {
       console.error('메시지 읽음 처리 실패:', error);
+      
+      // 현재 로그인한 사용자 정보가 있으면 해당 정보 사용
+      const currentUserId = getCurrentUserId();
+      const actualUserId = currentUserId || userId;
+      
       // API 실패 시 Mock 처리
       const msgIndex = mockMessages.findIndex(msg => 
-        msg.id === messageId && msg.receiverId === userId
+        msg.id === messageId && msg.receiverId === actualUserId
       );
       
       if (msgIndex !== -1) {
@@ -273,13 +298,7 @@ const userService = {
     } catch (error) {
       console.error('칭호 목록 조회 실패:', error);
       // 기본 칭호 목록 반환
-      return [
-        '새싹',
-        '기여자',
-        '전문가',
-        '마스터',
-        'SAPIENS'
-      ];
+      return mockTitles;
     }
   },
   
@@ -289,8 +308,13 @@ const userService = {
       await apiClient.post('/api/users/title', { title });
     } catch (error) {
       console.error('칭호 변경 실패:', error);
+      
+      // 현재 로그인한 사용자 정보가 있으면 해당 정보 사용
+      const currentUserId = getCurrentUserId();
+      const actualUserId = currentUserId || userId;
+      
       // Mock 처리
-      const userIndex = mockUsers.findIndex(u => u.id === userId);
+      const userIndex = mockUsers.findIndex(u => u.id === actualUserId);
       
       if (userIndex !== -1) {
         mockUsers[userIndex].title = title;

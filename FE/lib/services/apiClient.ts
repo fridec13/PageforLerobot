@@ -45,8 +45,17 @@ apiClient.interceptors.response.use(
       try {
         // 토큰 만료 시 로그아웃 처리
         if (typeof window !== 'undefined') {
+          // 현재 경로가 이미 로그인 페이지인 경우 리디렉션하지 않음
+          if (window.location.pathname.includes('/auth/login')) {
+            console.log('이미 로그인 페이지에 있어 리디렉션 스킵');
+            return Promise.reject(error);
+          }
+          
+          console.log('401 오류: 인증 토큰 만료 또는 유효하지 않음, 로그아웃 처리');
+          // 현재 URL을 저장하여 로그인 후 리디렉션
+          const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
           useAuthStore.getState().logout();
-          window.location.href = '/auth/login';
+          window.location.href = `/auth/login?returnUrl=${returnUrl}`;
         }
         return Promise.reject(error);
       } catch (refreshError) {

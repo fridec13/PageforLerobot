@@ -119,4 +119,85 @@ export const mockMessages: Message[] = [
     read: false,
     createdAt: new Date('2023-05-18')
   }
+];
+
+// 기여 내역 관련 타입
+export interface UserContribution {
+  id: string;
+  userId: string;
+  type: 'DOCUMENT' | 'WIKI' | 'FORUM';
+  title: string;
+  description: string;
+  createdAt: Date;
+}
+
+// Mock 기여 내역 데이터
+export const mockContributions: UserContribution[] = [
+  {
+    id: 'contrib_1',
+    userId: 'user_editor1',
+    type: 'DOCUMENT',
+    title: 'RoboDK 설치 가이드 작성',
+    description: 'Windows 및 Linux 설치 가이드를 작성했습니다.',
+    createdAt: new Date('2023-03-15')
+  },
+  {
+    id: 'contrib_2',
+    userId: 'user_editor1',
+    type: 'WIKI',
+    title: 'ROS2 튜토리얼 수정',
+    description: 'ROS2 설치 및 기본 사용법에 관한 내용을 수정했습니다.',
+    createdAt: new Date('2023-04-10')
+  },
+  {
+    id: 'contrib_3',
+    userId: 'user_contributor1',
+    type: 'FORUM',
+    title: 'Onshape 관련 질문 답변',
+    description: 'Onshape에서 모델링 문제에 대한 해결책을 제시했습니다.',
+    createdAt: new Date('2023-05-05')
+  },
+  {
+    id: 'contrib_4',
+    userId: 'user_moderator',
+    type: 'DOCUMENT',
+    title: 'LeRobot 연동 가이드 작성',
+    description: 'LeRobot과 ROS2 연동 방법에 대한 문서를 작성했습니다.',
+    createdAt: new Date('2023-05-20')
+  },
+  {
+    id: 'contrib_5',
+    userId: 'user_admin',
+    type: 'WIKI',
+    title: 'RoboDK API 예제 추가',
+    description: 'Python을 사용한 RoboDK API 활용 예제를 추가했습니다.',
+    createdAt: new Date('2023-06-08')
+  },
+  {
+    id: 'contrib_6',
+    userId: 'user_editor2',
+    type: 'DOCUMENT',
+    title: 'Onshape 기초 튜토리얼 작성',
+    description: '초보자를 위한 Onshape 인터페이스 사용법을 작성했습니다.',
+    createdAt: new Date('2023-06-15')
+  },
+  {
+    id: 'contrib_7',
+    userId: 'user_contributor2',
+    type: 'FORUM',
+    title: 'ROS2 노드 통신 질문 답변',
+    description: 'ROS2 노드 간 통신 오류 해결 방법을 안내했습니다.',
+    createdAt: new Date('2023-06-22')
+  }
+];
+
+// 사용 가능한 칭호 목록
+export const mockTitles: string[] = [
+  '새싹',
+  '기여자',
+  '위키 편집자',
+  '포럼 활동가',
+  '전문가',
+  '마스터',
+  'SAPIENS'
 ]; 

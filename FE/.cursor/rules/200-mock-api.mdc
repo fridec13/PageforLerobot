@@ -5,6 +5,10 @@ alwaysApply: true
 ---
 # Mock API 패턴 가이드라인
 
+mock data(더미 db)를 mock api(더미 api)를 연결하고, service에 요청에 따라서 mock api가 mock data의 내용을 응답해주는 것을 원함. 
+mock data를 직접 쓰는 걸 원하지 않았어. 
+내 의도대로 mock api와 mock data를 연결하고, serveice가 mock api로 부터 data를 받아오도록 하라.
+
 ## 역할 분리
 
 ### 프론트엔드 (Next.js)

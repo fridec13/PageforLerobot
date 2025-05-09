@@ -43,7 +43,7 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           // API를 통한 로그인 요청
-          const response = await apiClient.post('/api/auth/login', { 
+          const response = await apiClient.post('/auth/login', { 
             email, 
             password 
           });
@@ -115,15 +115,19 @@ export function initializeAuth() {
   const { isLoading, user, token } = useAuthStore.getState();
   
   if (isLoading) {
+    console.log('사용자 인증 상태 초기화 중...', { hasToken: !!token });
+    
     // 로컬 스토리지에서 사용자 정보를 이미 불러왔다면 로딩 상태 해제
     setTimeout(() => {
       useAuthStore.setState({ isLoading: false });
       
       // 토큰이 있으면 API에서 최신 사용자 정보 로드 시도
       if (token) {
+        console.log('저장된 토큰으로 사용자 정보 갱신 시도');
         apiClient.get('/api/users/me')
           .then(response => {
             if (response.data.success) {
+              console.log('사용자 정보 갱신 성공');
               useAuthStore.setState({ 
                 user: response.data.data,
                 isAuthenticated: true
@@ -132,7 +136,14 @@ export function initializeAuth() {
           })
           .catch(error => {
             console.error('사용자 정보 갱신 실패:', error);
+            // 토큰이 유효하지 않으면 로그아웃 처리
+            if (error.response?.status === 401) {
+              console.log('인증 만료로 로그아웃 처리');
+              useAuthStore.getState().logout();
+            }
           });
+      } else {
+        console.log('저장된 토큰 없음, 로그인 필요');
       }
     }, 500);
   }
