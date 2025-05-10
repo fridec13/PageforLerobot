@@ -1,11 +1,5 @@
 pipeline {
-  // Docker 이미지 안에서 빌드하겠다
-  agent {
-    docker { 
-      image 'gradle:8.5-jdk17' 
-      args  '-u root:root' 
-    }
-  }
+  agent any
 
   environment {
     DEPLOY_HOST = 'k12c205.p.ssafy.io'
@@ -22,8 +16,12 @@ pipeline {
 
     stage('Build & Test') {
       steps {
-        // 이제 gradlew 없어도 gradle을 바로 쓸 수 있
-        sh 'gradle clean build'
+        script {
+          // gradle:8.5-jdk17 이미지 안에서 빌드
+          docker.image('gradle:8.5-jdk17').inside('-u root:root') {
+            sh 'gradle clean build'
+          }
+        }
       }
       post {
         success {
