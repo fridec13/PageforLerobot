@@ -15,31 +15,30 @@ pipeline {
     }
 
     stage('Build & Test') {
-  steps {
-    script {
-      // gradle:8.5-jdk17 컨테이너 안에서…
-      docker.image('gradle:8.5-jdk17').inside('-u root:root') {
-        // BE 디렉터리로 이동해 빌드
-        dir('BE') {
-          sh 'gradle clean build'
+      steps {
+        script {
+          // gradle Docker 이미지를 이용해서 BE 폴더로 들어가 wrapper 실행
+          docker.image('gradle:8.5-jdk17').inside('-u root:root') {
+            dir('BE') {
+              // wrapper 스크립트가 BE/gradlew 에 있으므로
+              sh './gradlew clean build'
+            }
+          }
+        }
+      }
+      post {
+        success {
+          // 빌드 결과물을 BE/build/libs 에서 보관
+          archiveArtifacts artifacts: 'BE/build/libs/*.jar', fingerprint: true
         }
       }
     }
-  }
-  post {
-    success {
-      // 아티팩트도 BE/build/libs 경로에서 가져오기
-      archiveArtifacts artifacts: 'BE/build/libs/*.jar', fingerprint: true
-    }
-  }
-}
-
 
     stage('Deploy') {
       steps {
         sshagent(credentials: ['ec2-ssh']) {
           sh "ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} 'mkdir -p ${APP_DIR}'"
-          sh "scp -o StrictHostKeyChecking=no build/libs/*.jar ${DEPLOY_USER}@${DEPLOY_HOST}:${APP_DIR}/app.jar"
+          sh "scp -o StrictHostKeyChecking=no BE/build/libs/*.jar ${DEPLOY_USER}@${DEPLOY_HOST}:${APP_DIR}/app.jar"
           sh """
             ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} '
               pkill -f app.jar || true
