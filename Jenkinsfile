@@ -15,20 +15,25 @@ pipeline {
     }
 
     stage('Build & Test') {
-      steps {
-        script {
-          // gradle:8.5-jdk17 이미지 안에서 빌드
-          docker.image('gradle:8.5-jdk17').inside('-u root:root') {
-            sh 'gradle clean build'
-          }
-        }
-      }
-      post {
-        success {
-          archiveArtifacts artifacts: 'build/libs/*.jar', fingerprint: true
+  steps {
+    script {
+      // gradle:8.5-jdk17 컨테이너 안에서…
+      docker.image('gradle:8.5-jdk17').inside('-u root:root') {
+        // BE 디렉터리로 이동해 빌드
+        dir('BE') {
+          sh 'gradle clean build'
         }
       }
     }
+  }
+  post {
+    success {
+      // 아티팩트도 BE/build/libs 경로에서 가져오기
+      archiveArtifacts artifacts: 'BE/build/libs/*.jar', fingerprint: true
+    }
+  }
+}
+
 
     stage('Deploy') {
       steps {
