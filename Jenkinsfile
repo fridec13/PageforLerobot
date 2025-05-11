@@ -1,59 +1,47 @@
 pipeline {
   agent any
-
   environment {
-    DEPLOY_HOST = 'k12c205.p.ssafy.io'
-    DEPLOY_USER = 'ubuntu'
-    APP_DIR     = '/home/ubuntu/app'
+    EC2_HOST     = 'ec2-xx-xx-xx-xx.compute-1.amazonaws.com'
+    SSH_CREDENTIALS = 'ec2-ssh'
+    DB_HOST      = 'localhost'      // 또는 RDS endpoint
+    DB_USER      = 'appuser'
+    DB_PASS      = '비밀번호'
   }
-
   stages {
     stage('Checkout') {
       steps {
         checkout scm
       }
     }
-
-    stage('Build & Package') {
+    stage('Build') {
       steps {
-        script {
-          docker.image('gradle:8.5-jdk17').inside('-u root:root') {
-            dir('BE') {
-              // 테스트 제외하고 빌드
-              sh './gradlew clean build -x test'
-            }
-          }
-        }
-      }
-      post {
-        success {
-          archiveArtifacts artifacts: 'BE/build/libs/*.jar', fingerprint: true
-        }
+        sh 'mvn clean package -DskipTests'
       }
     }
-
-    stage('Deploy') {
-  steps {
-    withCredentials([sshUserPrivateKey(
-      credentialsId: 'ec2-ssh',
-      keyFileVariable: 'SSH_KEY',
-      usernameVariable: 'SSH_USER'
-    )]) {
-      // 1) 디렉터리 생성
-      sh 'ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$DEPLOY_HOST "mkdir -p $APP_DIR"'
-
-      // 2) JAR 복사
-      sh 'scp -i $SSH_KEY -o StrictHostKeyChecking=no BE/build/libs/*-plain.jar $SSH_USER@$DEPLOY_HOST:$APP_DIR/app.jar'
-
-      // 3a) 기존 프로세스 종료
-      sh 'ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$DEPLOY_HOST "pkill -f app.jar || true"'
-
-      // 3b) 새 프로세스 백그라운드 실행
-      sh 'ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$DEPLOY_HOST "nohup java -jar $APP_DIR/app.jar > $APP_DIR/app.log 2>&1 &"'
+    stage('Deploy to EC2') {
+      steps {
+        sshagent (credentials: [SSH_CREDENTIALS]) {
+          // 1) EC2로 JAR 파일 복사
+          sh """
+            scp target/*.jar ${EC2_USER}@${EC2_HOST}:/home/${EC2_USER}/app.jar
+          """
+          // 2) EC2에서 실행 (이전 프로세스 종료 후 재실행)
+          sh """
+            ssh ${EC2_USER}@${EC2_HOST} << 'EOF'
+              pkill -f app.jar || true
+              nohup java -jar /home/${EC2_USER}/app.jar \
+                --spring.datasource.url=jdbc:mysql://${DB_HOST}:3306/portfolio?serverTimezone=Asia/Seoul \
+                --spring.datasource.username=${DB_USER} \
+                --spring.datasource.password=${DB_PASS} \
+                > /home/${EC2_USER}/app.log 2>&1 &
+            EOF
+          """
+        }
+      }
     }
   }
-}
-
-
+  post {
+    success { echo '✅ 배포 성공!' }
+    failure { echo '❌ 배포 실패, 로그 확인해주세요.' }
   }
 }
