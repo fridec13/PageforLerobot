@@ -2,7 +2,7 @@ import axios from 'axios';
 import { useAuthStore } from '../auth';
 
 // 환경 변수에서 API URL을 가져오거나 기본값 사용
-const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
 // 개발 서버 api url
 // const API_URL = 'http://localhost:8080/api';
@@ -10,6 +10,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 // Axios 인스턴스 생성
 const apiClient = axios.create({
   baseURL: API_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },

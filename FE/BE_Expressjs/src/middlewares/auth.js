@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
-const { User } = require('../models');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 // JWT 토큰 확인 미들웨어
 const authMiddleware = async (req, res, next) => {
@@ -20,7 +21,9 @@ const authMiddleware = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret_key');
     
     // 사용자 정보 조회
-    const user = await User.findOne({ where: { id: decoded.id } });
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id }
+    });
     
     if (!user) {
       return res.status(404).json({ 

@@ -75,7 +75,7 @@ function RegisterForm() {
     
     // 회원가입 시도
     try {
-      const response = await apiClient.post('/api/auth/register', {
+      const response = await apiClient.post('/auth/register', {
         name: username,
         email,
         password,

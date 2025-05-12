@@ -1,28 +1,27 @@
 {
-  "name": "robossafyens-backend",
+  "name": "be_expressjs",
   "version": "1.0.0",
-  "description": "RoboSSAFYens 백엔드 서버",
-  "main": "src/index.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js",
-    "test": "jest"
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
   "dependencies": {
     "@prisma/client": "^6.7.0",
-    "bcryptjs": "^2.4.3",
+    "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
-    "dotenv": "^16.0.3",
+    "dotenv": "^16.5.0",
     "express": "^4.18.2",
-    "helmet": "^6.1.5",
-    "jsonwebtoken": "^9.0.0",
-    "morgan": "^1.10.0",
-    "winston": "^3.8.2"
+    "jsonwebtoken": "^9.0.2",
+    "winston": "^3.17.0"
   },
   "devDependencies": {
-    "jest": "^29.5.0",
     "nodemon": "^3.1.10",
-    "prisma": "^6.7.0",
-    "supertest": "^6.3.3"
+    "prisma": "^6.7.0"
   }
 }

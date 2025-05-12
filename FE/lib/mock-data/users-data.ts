@@ -199,5 +199,5 @@ export const mockTitles: string[] = [
   '포럼 활동가',
   '전문가',
   '마스터',
-  'SAPIENS'
+  'SSAFYENS'
 ]; 

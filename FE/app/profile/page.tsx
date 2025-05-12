@@ -2,16 +2,16 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { User, Key, MessageSquare, Award, History } from "lucide-react"
 import userService, { UserProfile, UserContribution, UserMessage, PasswordChangeRequest, ProfileUpdateRequest } from "@/lib/services/userService"
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import { useAuthStore } from "@/lib/auth"
 
 export default function ProfilePage() {
   const router = useRouter()
-  const { user, isAuthenticated, isLoading } = useAuthStore()
+  const { data: session, status } = useSession()
   const [activeTab, setActiveTab] = useState("info")
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [contributions, setContributions] = useState<UserContribution[]>([])
@@ -30,21 +30,24 @@ export default function ProfilePage() {
 
   // 인증 상태를 체크하고 로그인되지 않았으면 로그인 페이지로 이동
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      console.log('인증 실패, 로그인 페이지로 이동:', { isLoading, isAuthenticated });
+    if (status === "unauthenticated") {
+      console.log('인증 실패, 로그인 페이지로 이동');
       router.push('/auth/login?returnUrl=/profile');
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [status, router]);
 
   useEffect(() => {
     // 프로필 정보 로드
     const loadProfile = async () => {
-      if (!isAuthenticated || !user?.id) return;
+      if (!session?.user?.id) {
+        console.log('사용자 ID 없음:', { userId: session?.user?.id });
+        return;
+      }
       
       try {
         setLoading(true);
-        console.log('프로필 정보 로드 시작:', user.id);
-        const userData = await userService.getMyProfile(user.id);
+        console.log('프로필 정보 로드 시작:', session.user.id);
+        const userData = await userService.getMyProfile(session.user.id);
         setProfile(userData);
         setUpdateForm({
           name: userData.name,
@@ -60,8 +63,6 @@ export default function ProfilePage() {
 
     // 사용 가능한 칭호 목록 로드
     const loadTitles = async () => {
-      if (!isAuthenticated) return;
-      
       try {
         const titles = await userService.getTitles();
         setAvailableTitles(titles);
@@ -70,28 +71,28 @@ export default function ProfilePage() {
       }
     };
 
-    if (isAuthenticated && user?.id) {
-      console.log('인증 확인 완료:', { userId: user.id });
+    if (session?.user?.id) {
+      console.log('사용자 정보 확인 완료:', { userId: session.user.id });
       loadProfile();
       loadTitles();
     }
-  }, [isAuthenticated, user]);
+  }, [session]);
 
   // 탭 변경 시 데이터 로드
   useEffect(() => {
     const loadTabData = async () => {
-      if (!isAuthenticated || !user?.id) return
+      if (!session?.user?.id) return
 
       if (activeTab === "contributions") {
         try {
-          const result = await userService.getMyContributions(user.id)
+          const result = await userService.getMyContributions(session.user.id)
           setContributions(result.items)
         } catch (error) {
           console.error('기여 내역 로딩 오류:', error)
         }
       } else if (activeTab === "messages") {
         try {
-          const result = await userService.getMyMessages(user.id)
+          const result = await userService.getMyMessages(session.user.id)
           setMessages(result.items)
         } catch (error) {
           console.error('메시지 로딩 오류:', error)
@@ -99,17 +100,17 @@ export default function ProfilePage() {
       }
     }
 
-    if (isAuthenticated) {
+    if (session?.user?.id) {
       loadTabData()
     }
-  }, [activeTab, isAuthenticated, user])
+  }, [activeTab, session])
 
   // 프로필 업데이트 핸들러
   const handleProfileUpdate = async () => {
-    if (!user?.id) return
+    if (!session?.user?.id) return
     
     try {
-      const updatedProfile = await userService.updateProfile(user.id, updateForm)
+      const updatedProfile = await userService.updateProfile(session.user.id, updateForm)
       setProfile(updatedProfile)
       alert('프로필이 성공적으로 업데이트되었습니다.')
     } catch (error) {
@@ -120,10 +121,10 @@ export default function ProfilePage() {
 
   // 비밀번호 변경 핸들러
   const handlePasswordChange = async () => {
-    if (!user?.id) return
+    if (!session?.user?.id) return
     
     try {
-      await userService.changePassword(user.id, passwordForm)
+      await userService.changePassword(session.user.id, passwordForm)
       setPasswordForm({ currentPassword: '', newPassword: '' })
       alert('비밀번호가 성공적으로 변경되었습니다.')
     } catch (error) {
@@ -134,10 +135,10 @@ export default function ProfilePage() {
 
   // 칭호 변경 핸들러
   const handleTitleChange = async (title: string) => {
-    if (!user?.id) return
+    if (!session?.user?.id) return
     
     try {
-      await userService.setActiveTitle(user.id, title)
+      await userService.setActiveTitle(session.user.id, title)
       setProfile(prev => prev ? { ...prev, title } : null)
       alert('칭호가 성공적으로 변경되었습니다.')
     } catch (error) {
@@ -148,10 +149,10 @@ export default function ProfilePage() {
 
   // 메시지 읽음 처리
   const handleMarkAsRead = async (messageId: string) => {
-    if (!user?.id) return
+    if (!session?.user?.id) return
     
     try {
-      await userService.markMessageAsRead(user.id, messageId)
+      await userService.markMessageAsRead(session.user.id, messageId)
       setMessages(prev => 
         prev.map(msg => msg.id === messageId ? { ...msg, read: true } : msg)
       )
@@ -161,7 +162,7 @@ export default function ProfilePage() {
   }
 
   // 로그인 여부 및 데이터 로딩 상태 확인
-  if (isLoading || !isAuthenticated) {
+  if (status === "loading") {
     return <div className="flex justify-center items-center h-64">로그인 정보 확인 중...</div>
   }
   
