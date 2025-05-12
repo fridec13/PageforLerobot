@@ -19,21 +19,19 @@ class PostViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def perform_create(self, serializer):
-        serializer.save()
+        user_id = self.request.auth  # authentication에서 반환한 user_id
+        serializer.save(user_id=user_id)
 
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def toggle_like(self, request, pk=None):
         post = self.get_object()
-        user_id_from_request = request.data.get('user_id')
-        if not user_id_from_request:
-            return Response({"detail": "user_id is required."}, status=status.HTTP_400_BAD_REQUEST)
-
+        user_id = request.auth  # JWT에서 추출
         try:
-            like = Like.objects.get(post=post, user_id=user_id_from_request)
+            like = Like.objects.get(post=post, user_id=user_id)
             like.delete()
             return Response({"status": "unliked"}, status=status.HTTP_200_OK)
         except Like.DoesNotExist:
-            Like.objects.create(post=post, user_id=user_id_from_request)
+            Like.objects.create(post=post, user_id=user_id)
             return Response({"status": "liked"}, status=status.HTTP_201_CREATED)
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -42,7 +40,8 @@ class CommentViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def perform_create(self, serializer):
-        serializer.save()
+        user_id = self.request.auth
+        serializer.save(user_id=user_id)
 
 class LikeViewSet(viewsets.ModelViewSet):
     queryset = Like.objects.all()
@@ -50,10 +49,14 @@ class LikeViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
-        serializer.save()
-
+        user_id = self.request.auth
+        serializer.save(user_id=user_id)
 
 class PostImageViewSet(viewsets.ModelViewSet):
     queryset = PostImage.objects.all()
     serializer_class = PostImageSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def perform_create(self, serializer):
+        # PostImage는 post와 image_file만 받으면 됨
+        serializer.save()

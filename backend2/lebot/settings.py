@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "board",
     "rest_framework",
+    "storages",
 ]
 
 MIDDLEWARE = [
@@ -125,3 +126,12 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 JWT_SECRET_KEY = ""
 JWT_ALGORITHM = "HS256"
+
+AWS_ACCESS_KEY_ID = ""
+AWS_SECRET_ACCESS_KEY = ""
+AWS_STORAGE_BUCKET_NAME = ""
+AWS_S3_REGION_NAME = ""
+AWS_S3_CUSTOM_DOMAIN = ""
+AWS_DEFAULT_ACL = None
+
+DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"

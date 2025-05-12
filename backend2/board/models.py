@@ -45,7 +45,7 @@ class Like(models.Model):    # 좋아요
 
 class PostImage(models.Model):    # 게시글 이미지
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="images")
-    image_file = models.ImageField(upload_to="")
+    image_file = models.ImageField(upload_to="post_images/")  # S3에 post_images/ 폴더로 업로드
 
     def __str__(self):
         return f"{self.post.title} - {self.image_file.name}"
