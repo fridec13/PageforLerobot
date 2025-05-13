@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -12,16 +12,21 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
+// SearchParams를 사용하는 래퍼 컴포넌트
+function SearchParamsWrapper({ children }: { children: (returnUrl: string) => React.ReactNode }) {
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams.get('returnUrl') || '/';
+  
+  return <>{children(returnUrl)}</>;
+}
+
 // 로그인 폼 컴포넌트
-function LoginForm() {
+function LoginForm({ returnUrl }: { returnUrl: string }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [validationError, setValidationError] = useState('');
   
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const returnUrl = searchParams.get('returnUrl') || '/';
-  
   const { login, isAuthenticated, isLoading, error, clearError } = useAuthStore();
 
   // 이미 로그인한 경우 홈 또는 리턴 URL로 리디렉션
@@ -146,7 +151,26 @@ function LoginForm() {
   );
 }
 
+// 로딩 상태 컴포넌트
+function LoginFormFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-[calc(100vh-16rem)]">
+      <Card className="w-full max-w-md shadow-lg p-8">
+        <div className="flex justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 // 메인 컴포넌트
 export default function LoginPage() {
-  return <LoginForm />;
+  return (
+    <Suspense fallback={<LoginFormFallback />}>
+      <SearchParamsWrapper>
+        {(returnUrl) => <LoginForm returnUrl={returnUrl} />}
+      </SearchParamsWrapper>
+    </Suspense>
+  );
 } 
