@@ -17,7 +17,7 @@ class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all().order_by('-created_at')
     serializer_class = PostSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-
+    
     def perform_create(self, serializer):
         user_id = self.request.auth  # authentication에서 반환한 user_id
         serializer.save(user_id=user_id)
