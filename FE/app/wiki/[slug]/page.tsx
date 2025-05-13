@@ -1,18 +1,22 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import { useParams, useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
-import { Edit, History, MessageSquare } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Edit, History, MessageSquare, ChevronUp } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useAuthStore } from "@/lib/auth"
 import wikiService from "@/lib/services/wikiService"
 import { WikiDocument } from "@/lib/models/wiki"
+import { parseWikiText } from "@/lib/utils"
 
 // 레이아웃에 문서 제목을 전달하기 위한 커스텀 이벤트
 declare global {
@@ -31,6 +35,8 @@ export default function WikiDocumentPage() {
   const [document, setDocument] = useState<WikiDocument | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showTopButton, setShowTopButton] = useState(false)
+  const contentRef = useRef<HTMLDivElement>(null)
   
   // 문서 정보 가져오기 및 레이아웃에 제목 전달
   useEffect(() => {
@@ -77,6 +83,104 @@ export default function WikiDocumentPage() {
       }
     }
   }, [slug])
+  
+  // 스크롤 감지 및 Top 버튼 표시
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 300) {
+        setShowTopButton(true);
+      } else {
+        setShowTopButton(false);
+      }
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+  
+  // 최상단으로 스크롤
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+  
+  // 각주 기능 설정
+  useEffect(() => {
+    if (!contentRef.current) return;
+    
+    // 각주와 미주 클릭 이벤트 처리
+    const footnoteRefs = contentRef.current.querySelectorAll('.footnote-ref');
+    footnoteRefs.forEach((ref) => {
+      ref.addEventListener('click', () => {
+        const footnoteId = ref.getAttribute('data-footnote-id');
+        if (footnoteId && typeof window !== 'undefined') {
+          const footnoteElement = window.document.getElementById(`footnote-${footnoteId}`);
+          if (footnoteElement) {
+            footnoteElement.scrollIntoView({ behavior: 'smooth' });
+            footnoteElement.classList.add('bg-yellow-50');
+            setTimeout(() => {
+              footnoteElement.classList.remove('bg-yellow-50');
+            }, 2000);
+          }
+        }
+      });
+    });
+    
+    // 미주 클릭 이벤트 처리
+    const commentRefs = contentRef.current.querySelectorAll('.wiki-comment');
+    commentRefs.forEach((ref) => {
+      ref.addEventListener('click', () => {
+        const commentId = ref.getAttribute('data-comment-id');
+        if (commentId && typeof window !== 'undefined') {
+          const commentElement = window.document.getElementById(`comment-${commentId}`);
+          if (commentElement) {
+            commentElement.scrollIntoView({ behavior: 'smooth' });
+            commentElement.classList.add('bg-yellow-50');
+            setTimeout(() => {
+              commentElement.classList.remove('bg-yellow-50');
+            }, 2000);
+          }
+        }
+      });
+    });
+    
+    // 각주/미주 참조로 돌아가기 링크 클릭 이벤트
+    const backLinks = contentRef.current.querySelectorAll('a[href^="#footnote-ref-"], a[href^="#comment-ref-"]');
+    backLinks.forEach((link) => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const href = link.getAttribute('href');
+        if (href && typeof window !== 'undefined') {
+          const refElement = window.document.querySelector(href);
+          if (refElement) {
+            refElement.scrollIntoView({ behavior: 'smooth' });
+            refElement.classList.add('bg-yellow-50');
+            setTimeout(() => {
+              refElement.classList.remove('bg-yellow-50');
+            }, 2000);
+          }
+        }
+      });
+    });
+    
+    return () => {
+      if (!contentRef.current) return;
+      const footnoteRefs = contentRef.current.querySelectorAll('.footnote-ref, .wiki-comment');
+      footnoteRefs.forEach((ref) => {
+        ref.removeEventListener('click', () => {});
+      });
+      
+      const backLinks = contentRef.current.querySelectorAll('a[href^="#footnote-ref-"], a[href^="#comment-ref-"]');
+      backLinks.forEach((link) => {
+        link.removeEventListener('click', () => {});
+      });
+    };
+  }, [document]);
   
   // 문서 편집 페이지로 이동
   const handleEdit = () => {
@@ -186,8 +290,12 @@ export default function WikiDocumentPage() {
       <Card>
         <CardContent className="pt-6">
           <div className="prose prose-blue max-w-none dark:prose-invert">
-            {/* 실제로는 마크다운 렌더링 라이브러리 사용 */}
-            <div className="whitespace-pre-wrap">{document.content}</div>
+            {/* 위키 문법 렌더링 - utils에서 가져온 파서 사용 */}
+            <div 
+              ref={contentRef}
+              className="wiki-content"
+              dangerouslySetInnerHTML={{ __html: parseWikiText(document.content) }}
+            />
           </div>
         </CardContent>
       </Card>
@@ -196,13 +304,34 @@ export default function WikiDocumentPage() {
       
       <div className="text-sm text-muted-foreground">
         <p>
-          이 문서는 {formatDate(document.createdAt)}에 {document.createdBy.username}님이 처음 작성했으며,
-          {formatDate(document.updatedAt)}에 {document.lastModifiedBy.username}님이 마지막으로 수정했습니다.
+          이 문서는 {formatDate(document.createdAt)}에 {document.createdBy.name}님이 처음 작성했으며,
+          {formatDate(document.updatedAt)}에 {document.lastModifiedBy.name}님이 마지막으로 수정했습니다.
         </p>
         <p className="mt-1">
           RoboSSAFYens 위키의 모든 문서는 지속적으로 업데이트되며, 누구나 기여할 수 있습니다.
         </p>
       </div>
+      
+      {/* 최상단으로 스크롤하는 Top 버튼 */}
+      {showTopButton && (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={scrollToTop}
+                size="icon"
+                className="fixed bottom-8 right-8 h-10 w-10 rounded-full shadow-md bg-blue-500 hover:bg-blue-600 transition-all duration-300"
+                aria-label="맨 위로 스크롤"
+              >
+                <ChevronUp className="h-5 w-5 text-white" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>맨 위로</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
     </div>
   )
 } 

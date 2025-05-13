@@ -4,7 +4,7 @@ info:
   description: 인증 및 사용자 관련 API 문서
   version: 1.0.0
 servers:
-  - url: http://localhost:3000/api
+  - url: http://localhost:4000/api
     description: Local server
 paths:
   /auth/register:

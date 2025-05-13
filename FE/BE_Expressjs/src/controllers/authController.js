@@ -70,6 +70,8 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
     
+    console.log('로그인 시도:', { email, passwordLength: password?.length });
+    
     // 유효성 검사
     if (!email || !password) {
       return res.status(400).json({
@@ -83,6 +85,12 @@ exports.login = async (req, res) => {
       where: { email }
     });
     
+    console.log('사용자 조회 결과:', { 
+      found: !!user, 
+      userId: user?.id,
+      storedPasswordHash: user?.password?.substring(0, 20) + '...' // 처음 일부만 로그
+    });
+    
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -91,7 +99,14 @@ exports.login = async (req, res) => {
     }
     
     // 비밀번호 확인
+    console.log('비밀번호 검증 시도:', { 
+      inputPassword: password,
+      storedHash: user.password
+    });
+    
     const isPasswordValid = await bcrypt.compare(password, user.password);
+    
+    console.log('비밀번호 검증 결과:', { isPasswordValid });
     
     if (!isPasswordValid) {
       return res.status(401).json({

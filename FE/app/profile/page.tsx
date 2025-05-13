@@ -2,16 +2,16 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { User, Key, MessageSquare, Award, History } from "lucide-react"
 import userService, { UserProfile, UserContribution, UserMessage, PasswordChangeRequest, ProfileUpdateRequest } from "@/lib/services/userService"
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
+import { useAuthStore, useAuth } from "@/lib/auth"
 
 export default function ProfilePage() {
   const router = useRouter()
-  const { data: session, status } = useSession()
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
   const [activeTab, setActiveTab] = useState("info")
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [contributions, setContributions] = useState<UserContribution[]>([])
@@ -25,29 +25,23 @@ export default function ProfilePage() {
   })
   const [passwordForm, setPasswordForm] = useState<PasswordChangeRequest>({
     currentPassword: '',
-    newPassword: ''
+    newPassword: '',
+    confirmPassword: ''
   })
 
-  // 인증 상태를 체크하고 로그인되지 않았으면 로그인 페이지로 이동
+  // 모든 useEffect Hook은 여기에 배치
   useEffect(() => {
-    if (status === "unauthenticated") {
-      console.log('인증 실패, 로그인 페이지로 이동');
-      router.push('/auth/login?returnUrl=/profile');
+    // 인증되지 않은 경우 또는 로딩 중인 경우에는 프로필을 로드하지 않음
+    if (authLoading || !isAuthenticated || !user?.id) {
+      return;
     }
-  }, [status, router]);
-
-  useEffect(() => {
+    
     // 프로필 정보 로드
     const loadProfile = async () => {
-      if (!session?.user?.id) {
-        console.log('사용자 ID 없음:', { userId: session?.user?.id });
-        return;
-      }
-      
       try {
         setLoading(true);
-        console.log('프로필 정보 로드 시작:', session.user.id);
-        const userData = await userService.getMyProfile(session.user.id);
+        console.log('프로필 정보 로드 시작:', user.id);
+        const userData = await userService.getMyProfile();
         setProfile(userData);
         setUpdateForm({
           name: userData.name,
@@ -71,46 +65,66 @@ export default function ProfilePage() {
       }
     };
 
-    if (session?.user?.id) {
-      console.log('사용자 정보 확인 완료:', { userId: session.user.id });
-      loadProfile();
-      loadTitles();
-    }
-  }, [session]);
+    loadProfile();
+    loadTitles();
+  }, [user, isAuthenticated, authLoading]);
 
   // 탭 변경 시 데이터 로드
   useEffect(() => {
-    const loadTabData = async () => {
-      if (!session?.user?.id) return
+    if (authLoading || !isAuthenticated || !user?.id) return;
 
+    const loadTabData = async () => {
       if (activeTab === "contributions") {
         try {
-          const result = await userService.getMyContributions(session.user.id)
-          setContributions(result.items)
+          const result = await userService.getMyContributions();
+          setContributions(result.items);
         } catch (error) {
-          console.error('기여 내역 로딩 오류:', error)
+          console.error('기여 내역 로딩 오류:', error);
         }
       } else if (activeTab === "messages") {
         try {
-          const result = await userService.getMyMessages(session.user.id)
-          setMessages(result.items)
+          const result = await userService.getMyMessages();
+          setMessages(result.items);
         } catch (error) {
-          console.error('메시지 로딩 오류:', error)
+          console.error('메시지 로딩 오류:', error);
         }
       }
-    }
+    };
 
-    if (session?.user?.id) {
-      loadTabData()
-    }
-  }, [activeTab, session])
+    loadTabData();
+  }, [activeTab, isAuthenticated, user, authLoading]);
+
+  // 조건부 반환은 모든 Hook 선언 후에 배치해야 함
+  if (authLoading) {
+    return <div className="flex justify-center items-center h-64">로그인 정보 확인 중...</div>
+  }
+  
+  // 로그인하지 않은 경우 로그인 유도 UI 표시
+  if (!isAuthenticated) {
+    console.log('인증되지 않은 사용자 - 로그인 유도 UI 표시');
+    return (
+      <div className="max-w-4xl mx-auto p-8">
+        <h1 className="text-3xl font-bold mb-6">내 프로필</h1>
+        <div className="bg-white shadow-md rounded-lg p-8 text-center">
+          <User className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+          <h2 className="text-2xl font-bold mb-4">로그인이 필요합니다</h2>
+          <p className="text-gray-600 mb-6">
+            프로필 정보를 보려면 로그인이 필요합니다.
+          </p>
+          <Link href="/auth/login?returnUrl=/profile" className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded">
+            로그인하기
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   // 프로필 업데이트 핸들러
   const handleProfileUpdate = async () => {
-    if (!session?.user?.id) return
+    if (!isAuthenticated || !user?.id) return
     
     try {
-      const updatedProfile = await userService.updateProfile(session.user.id, updateForm)
+      const updatedProfile = await userService.updateProfile(updateForm)
       setProfile(updatedProfile)
       alert('프로필이 성공적으로 업데이트되었습니다.')
     } catch (error) {
@@ -121,11 +135,11 @@ export default function ProfilePage() {
 
   // 비밀번호 변경 핸들러
   const handlePasswordChange = async () => {
-    if (!session?.user?.id) return
+    if (!isAuthenticated || !user?.id) return
     
     try {
-      await userService.changePassword(session.user.id, passwordForm)
-      setPasswordForm({ currentPassword: '', newPassword: '' })
+      await userService.changePassword(passwordForm)
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
       alert('비밀번호가 성공적으로 변경되었습니다.')
     } catch (error) {
       console.error('비밀번호 변경 오류:', error)
@@ -135,10 +149,10 @@ export default function ProfilePage() {
 
   // 칭호 변경 핸들러
   const handleTitleChange = async (title: string) => {
-    if (!session?.user?.id) return
+    if (!isAuthenticated || !user?.id) return
     
     try {
-      await userService.setActiveTitle(session.user.id, title)
+      await userService.setActiveTitle(title)
       setProfile(prev => prev ? { ...prev, title } : null)
       alert('칭호가 성공적으로 변경되었습니다.')
     } catch (error) {
@@ -149,10 +163,10 @@ export default function ProfilePage() {
 
   // 메시지 읽음 처리
   const handleMarkAsRead = async (messageId: string) => {
-    if (!session?.user?.id) return
+    if (!isAuthenticated || !user?.id) return
     
     try {
-      await userService.markMessageAsRead(session.user.id, messageId)
+      await userService.markMessageAsRead(messageId)
       setMessages(prev => 
         prev.map(msg => msg.id === messageId ? { ...msg, read: true } : msg)
       )
@@ -161,11 +175,6 @@ export default function ProfilePage() {
     }
   }
 
-  // 로그인 여부 및 데이터 로딩 상태 확인
-  if (status === "loading") {
-    return <div className="flex justify-center items-center h-64">로그인 정보 확인 중...</div>
-  }
-  
   if (loading || !profile) {
     return <div className="flex justify-center items-center h-64">프로필 로딩 중...</div>
   }
@@ -189,7 +198,7 @@ export default function ProfilePage() {
               <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">{profile.title}</span>
               {profile.badges?.map((badge, index) => (
                 <span key={index} className="bg-purple-100 text-purple-800 text-xs font-semibold px-2.5 py-0.5 rounded">
-                  {badge}
+                  {typeof badge === 'string' ? badge : badge.name}
                 </span>
               ))}
             </div>

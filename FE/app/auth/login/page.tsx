@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
-// SearchParams를 사용하는 컴포넌트를 분리
+// 로그인 폼 컴포넌트
 function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,7 +34,7 @@ function LoginForm() {
   // 폼 제출 처리
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    clearError && clearError();
+    clearError();
     
     // 간단한 폼 유효성 검사
     if (!email || !password) {
@@ -130,19 +130,6 @@ function LoginForm() {
           </form>
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">
-          <div className="text-sm text-center text-muted-foreground">
-            또는 소셜 계정으로 로그인
-          </div>
-          
-          <div className="grid grid-cols-2 gap-2 w-full">
-            <Button variant="outline" className="w-full">
-              Google
-            </Button>
-            <Button variant="outline" className="w-full">
-              GitHub
-            </Button>
-          </div>
-          
           <div className="text-center text-sm">
             계정이 없으신가요?{' '}
             <Link href="/auth/register" className="text-blue-500 hover:underline">
@@ -159,15 +146,7 @@ function LoginForm() {
   );
 }
 
-// 메인 컴포넌트에서 Suspense로 감싸기
+// 메인 컴포넌트
 export default function LoginPage() {
-  return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center min-h-[calc(100vh-16rem)]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    }>
-      <LoginForm />
-    </Suspense>
-  );
+  return <LoginForm />;
 } 

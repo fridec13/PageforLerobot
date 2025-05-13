@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import wikiService from "@/lib/services/wikiService"
-import { Category, User as WikiUser } from "@/lib/models/wiki"
+import { Category, User as WikiUser, CreateWikiDTO } from "@/lib/models/wiki"
 
 export default function CreateWikiPage() {
   const router = useRouter()
@@ -98,27 +98,15 @@ export default function CreateWikiPage() {
     try {
       setIsLoading(true)
       
-      // 선택된 카테고리 객체 목록 생성
-      const categoryObjects = selectedCategories.map(id => 
-        categories.find(cat => cat.id === id)
-      ).filter(Boolean) as Category[]
-      
       // 문서 생성 요청
       await wikiService.createDocument({
         title,
         slug,
         content,
-        categories: categoryObjects,
-        createdBy: user ? {
-          id: user.id,
-          username: user.name || 'Unknown User',
-          email: user.email || '',
-          role: user.role,
-          title: user.title,
-          profileImage: user.image,
-          contributions: user.contribution
-        } : undefined
-      })
+        categories: selectedCategories, // 카테고리 ID 배열
+        userId: user?.id, // 백엔드에서 필요한 사용자 ID
+        createdBy: user // UI 로직을 위한 사용자 객체
+      } as CreateWikiDTO)
       
       // 성공 시 해당 문서 페이지로 이동
       router.push(`/wiki/${slug}`)

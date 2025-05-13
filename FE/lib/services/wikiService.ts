@@ -6,11 +6,14 @@ import {
   Comment,
   Category,
   WikiListOptions,
-  SearchResult
+  SearchResult,
+  User,
+  CreateWikiDTO,
+  UpdateWikiDTO
 } from '../models/wiki';
 
 // API URL 설정
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
 /**
  * 위키 API 호출을 위한 Axios 인스턴스
@@ -26,140 +29,41 @@ const apiClient = axios.create({
 // 요청 인터셉터 설정
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+    try {
+      // 클라이언트 사이드에서만 localStorage에 접근
+      let token = null;
+      if (typeof window !== 'undefined') {
+        // 직접 auth-storage에서 토큰 추출 시도
+        const authData = localStorage.getItem('auth-storage');
+        if (authData) {
+          const parsedData = JSON.parse(authData);
+          token = parsedData?.state?.token;
+          console.log('토큰 발견:', token ? '있음' : '없음');
+        } else {
+          // 기존 방식으로 시도
+          token = localStorage.getItem('token');
+          console.log('기존 방식으로 토큰 시도:', token ? '있음' : '없음');
+        }
+      }
+      
+      if (token) {
+        // Bearer 접두사 추가 (백엔드가 이 형식을 기대할 경우)
+        config.headers['Authorization'] = `Bearer ${token}`;
+        console.log('요청 헤더에 토큰 추가됨');
+      } else {
+        console.log('토큰이 없어 인증 헤더가 추가되지 않음');
+      }
+    } catch (error) {
+      console.error('토큰 설정 중 오류 발생:', error);
     }
+    
     return config;
   },
   (error) => {
+    console.error('API 요청 인터셉터 에러:', error);
     return Promise.reject(error);
   }
 );
-
-/**
- * 더미 데이터: 인기 위키 문서
- */
-const DUMMY_POPULAR_DOCUMENTS: WikiDocument[] = [
-  {
-    id: '1',
-    slug: 'robot-basics',
-    title: '로봇 공학 기초',
-    content: '로봇 공학의 기초적인 개념과 역사에 대한 설명...',
-    createdAt: new Date('2023-01-15'),
-    updatedAt: new Date('2023-06-20'),
-    createdBy: { id: 'user1', username: 'RobotMaster', email: 'master@example.com', role: 'user' },
-    lastModifiedBy: { id: 'user2', username: 'TechGuru', email: 'guru@example.com', role: 'user' },
-    viewCount: 1250,
-    categories: [
-      { id: 'cat1', name: '기초', slug: 'basics', description: '기초 지식' }
-    ]
-  },
-  {
-    id: '2',
-    slug: 'robot-sensors',
-    title: '로봇 센서의 종류와 활용',
-    content: '다양한 로봇 센서의 원리와 활용 방법에 대한 상세 설명...',
-    createdAt: new Date('2023-02-10'),
-    updatedAt: new Date('2023-07-15'),
-    createdBy: { id: 'user2', username: 'TechGuru', email: 'guru@example.com', role: 'user' },
-    lastModifiedBy: { id: 'user2', username: 'TechGuru', email: 'guru@example.com', role: 'user' },
-    viewCount: 980,
-    categories: [
-      { id: 'cat2', name: '기술', slug: 'technology', description: '기술 관련' }
-    ]
-  },
-  {
-    id: '3',
-    slug: 'robot-programming',
-    title: '로봇 프로그래밍 입문',
-    content: '로봇 프로그래밍을 시작하는 방법과 기본 개념...',
-    createdAt: new Date('2023-03-05'),
-    updatedAt: new Date('2023-08-10'),
-    createdBy: { id: 'user3', username: 'CodeNinja', email: 'ninja@example.com', role: 'user' },
-    lastModifiedBy: { id: 'user1', username: 'RobotMaster', email: 'master@example.com', role: 'user' },
-    viewCount: 1540,
-    categories: [
-      { id: 'cat3', name: '프로그래밍', slug: 'programming', description: '프로그래밍 관련' }
-    ]
-  },
-  {
-    id: '4',
-    slug: 'ai-robot-future',
-    title: '인공지능과 로봇의 미래',
-    content: '인공지능 기술의 발전과 로봇 산업의 미래 전망...',
-    createdAt: new Date('2023-04-20'),
-    updatedAt: new Date('2023-09-05'),
-    createdBy: { id: 'user4', username: 'FutureTech', email: 'future@example.com', role: 'user' },
-    lastModifiedBy: { id: 'user4', username: 'FutureTech', email: 'future@example.com', role: 'user' },
-    viewCount: 2100,
-    categories: [
-      { id: 'cat4', name: '전망', slug: 'future', description: '미래 전망' }
-    ]
-  }
-];
-
-/**
- * 더미 데이터: 최근 수정된 문서
- */
-const DUMMY_RECENT_DOCUMENTS: WikiDocument[] = [
-  {
-    id: '5',
-    slug: 'robotic-arm-control',
-    title: '로봇 팔 제어 알고리즘',
-    content: '로봇 팔의 제어 알고리즘과 구현 방법...',
-    createdAt: new Date('2023-05-15'),
-    updatedAt: new Date(Date.now() - 3600000), // 1시간 전
-    createdBy: { id: 'user1', username: 'RobotMaster', email: 'master@example.com', role: 'user' },
-    lastModifiedBy: { id: 'user5', username: 'JK', email: 'jk@example.com', role: 'user', title: '전문가' },
-    viewCount: 450,
-    categories: [
-      { id: 'cat5', name: '제어', slug: 'control', description: '제어 기술' }
-    ]
-  },
-  {
-    id: '6',
-    slug: 'robot-navigation',
-    title: '로봇 내비게이션 시스템',
-    content: '로봇의 자율 주행과 내비게이션 기술...',
-    createdAt: new Date('2023-06-10'),
-    updatedAt: new Date(Date.now() - 10800000), // 3시간 전
-    createdBy: { id: 'user2', username: 'TechGuru', email: 'guru@example.com', role: 'user' },
-    lastModifiedBy: { id: 'user6', username: 'MS', email: 'ms@example.com', role: 'user' },
-    viewCount: 320,
-    categories: [
-      { id: 'cat6', name: '자율주행', slug: 'autonomous', description: '자율 주행' }
-    ]
-  },
-  {
-    id: '7',
-    slug: 'ros2-basics',
-    title: 'ROS2 기초',
-    content: 'Robot Operating System 2의 기본 개념과 사용법...',
-    createdAt: new Date('2023-07-05'),
-    updatedAt: new Date(Date.now() - 21600000), // 6시간 전
-    createdBy: { id: 'user3', username: 'CodeNinja', email: 'ninja@example.com', role: 'user' },
-    lastModifiedBy: { id: 'user7', username: 'YJ', email: 'yj@example.com', role: 'user' },
-    viewCount: 780,
-    categories: [
-      { id: 'cat7', name: 'ROS', slug: 'ros', description: 'Robot Operating System' }
-    ]
-  }
-];
-
-/**
- * 더미 데이터: 카테고리 목록
- */
-const DUMMY_CATEGORIES: Category[] = [
-  { id: 'cat1', name: '기초 지식', slug: 'basics', description: '로봇 공학의 기초 개념' },
-  { id: 'cat2', name: '하드웨어', slug: 'hardware', description: '로봇 하드웨어 관련' },
-  { id: 'cat3', name: '소프트웨어', slug: 'software', description: '로봇 소프트웨어 관련' },
-  { id: 'cat4', name: '인공지능', slug: 'ai', description: '로봇 인공지능 기술' },
-  { id: 'cat5', name: '센서 기술', slug: 'sensors', description: '로봇 센서 관련 기술' },
-  { id: 'cat6', name: '응용 분야', slug: 'applications', description: '로봇 응용 분야' },
-  { id: 'cat7', name: '프로그래밍', slug: 'programming', description: '로봇 프로그래밍' },
-  { id: 'cat8', name: '미래 기술', slug: 'future', description: '로봇 미래 기술' }
-];
 
 /**
  * 위키 서비스 객체
@@ -176,16 +80,8 @@ const wikiService = {
    */
   getDocuments: async (options?: WikiListOptions): Promise<{ documents: WikiDocument[], total: number }> => {
     try {
-      // 실제 API 호출
-      // const response = await apiClient.get('', { params: options });
-      // return response.data;
-      
-      // 더미 데이터 반환
-      const allDocuments = [...DUMMY_POPULAR_DOCUMENTS, ...DUMMY_RECENT_DOCUMENTS];
-      return {
-        documents: allDocuments,
-        total: allDocuments.length
-      };
+      const response = await apiClient.get('', { params: options });
+      return response.data.data;
     } catch (error) {
       console.error('Error fetching wiki documents:', error);
       throw error;
@@ -202,12 +98,8 @@ const wikiService = {
    */
   getPopularDocuments: async (limit: number = 4): Promise<WikiDocument[]> => {
     try {
-      // 실제 API 호출
-      // const response = await apiClient.get('/popular', { params: { limit } });
-      // return response.data;
-      
-      // 더미 데이터 반환
-      return DUMMY_POPULAR_DOCUMENTS.slice(0, limit);
+      const response = await apiClient.get('/popular', { params: { limit } });
+      return response.data.data.map(transformDocumentResponse);
     } catch (error) {
       console.error('Error fetching popular wiki documents:', error);
       throw error;
@@ -224,14 +116,35 @@ const wikiService = {
    */
   getRecentDocuments: async (limit: number = 3): Promise<WikiDocument[]> => {
     try {
-      // 실제 API 호출
-      // const response = await apiClient.get('/recent', { params: { limit } });
-      // return response.data;
-      
-      // 더미 데이터 반환
-      return DUMMY_RECENT_DOCUMENTS.slice(0, limit);
+      const response = await apiClient.get('/recent', { params: { limit } });
+      return response.data.data.map(transformDocumentResponse);
     } catch (error) {
       console.error('Error fetching recent wiki documents:', error);
+      throw error;
+    }
+  },
+  
+  /**
+   * 새로 생성된 위키 문서 조회
+   * 
+   * @param limit 가져올 문서 수
+   * @returns 새로 생성된 위키 문서 목록
+   * 
+   * GET /api/wiki (생성일 기준 정렬)
+   */
+  getNewDocuments: async (limit: number = 3): Promise<WikiDocument[]> => {
+    try {
+      const response = await apiClient.get('', { 
+        params: { 
+          sortBy: 'createdAt', 
+          sortOrder: 'desc',
+          limit
+        } 
+      });
+      
+      return response.data.data.documents.map(transformDocumentResponse);
+    } catch (error) {
+      console.error('Error fetching new wiki documents:', error);
       throw error;
     }
   },
@@ -246,19 +159,8 @@ const wikiService = {
    */
   getDocumentBySlug: async (slug: string): Promise<WikiDocument> => {
     try {
-      // 실제 API 호출
-      // const response = await apiClient.get(`/${slug}`);
-      // return response.data;
-      
-      // 더미 데이터에서 찾기
-      const allDocuments = [...DUMMY_POPULAR_DOCUMENTS, ...DUMMY_RECENT_DOCUMENTS];
-      const document = allDocuments.find(doc => doc.slug === slug);
-      
-      if (!document) {
-        throw new Error(`Document not found: ${slug}`);
-      }
-      
-      return document;
+      const response = await apiClient.get(`/${slug}`);
+      return transformDocumentResponse(response.data.data);
     } catch (error) {
       console.error(`Error fetching wiki document ${slug}:`, error);
       throw error;
@@ -268,30 +170,27 @@ const wikiService = {
   /**
    * 새 위키 문서 생성
    * 
-   * @param document 생성할 문서 정보
+   * @param documentData 생성할 문서 정보
    * @returns 생성된 위키 문서
    * 
    * POST /api/wiki
    */
-  createDocument: async (document: Partial<WikiDocument>): Promise<WikiDocument> => {
+  createDocument: async (documentData: CreateWikiDTO): Promise<WikiDocument> => {
     try {
-      // 실제 API 호출
-      // const response = await apiClient.post('', document);
-      // return response.data;
+      // 백엔드로 전송할 데이터 준비
+      const payload: any = { ...documentData };
       
-      // 더미 응답 (실제로는 서버에서 저장 후 반환)
-      return {
-        id: `new-${Date.now()}`,
-        slug: document.slug || '',
-        title: document.title || '',
-        content: document.content || '',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        createdBy: document.createdBy || { id: 'current-user', username: '현재 사용자', email: 'user@example.com', role: 'user' },
-        lastModifiedBy: document.createdBy || { id: 'current-user', username: '현재 사용자', email: 'user@example.com', role: 'user' },
-        viewCount: 0,
-        categories: document.categories || []
-      };
+      // 사용자 객체 대신 ID만 전송
+      if (payload.createdBy && typeof payload.createdBy === 'object') {
+        payload.userId = payload.createdBy.id;
+        delete payload.createdBy; // createdBy 객체는 제거
+      }
+      
+      // 요청 전 데이터 확인
+      console.log('문서 생성 요청 데이터:', payload);
+      
+      const response = await apiClient.post('', payload);
+      return transformDocumentResponse(response.data.data);
     } catch (error) {
       console.error('Error creating wiki document:', error);
       throw error;
@@ -308,28 +207,34 @@ const wikiService = {
    * 
    * PUT /api/wiki/:slug
    */
-  updateDocument: async (slug: string, updates: Partial<WikiDocument>, comment: string): Promise<WikiDocument> => {
+  updateDocument: async (slug: string, updates: UpdateWikiDTO, comment: string): Promise<WikiDocument> => {
     try {
-      // 실제 API 호출
-      // const response = await apiClient.put(`/${slug}`, { ...updates, comment });
-      // return response.data;
+      // 백엔드에 전송할 데이터 준비
+      const payload: UpdateWikiDTO = { ...updates, comment };
       
-      // 더미 응답
-      const allDocuments = [...DUMMY_POPULAR_DOCUMENTS, ...DUMMY_RECENT_DOCUMENTS];
-      const documentIndex = allDocuments.findIndex(doc => doc.slug === slug);
-      
-      if (documentIndex === -1) {
-        throw new Error(`Document not found: ${slug}`);
+      // lastModifiedBy 처리 - 객체가 전달되면 ID만 추출
+      if (payload.lastModifiedBy && typeof payload.lastModifiedBy === 'object') {
+        payload.userId = payload.lastModifiedBy.id;
+        delete payload.lastModifiedBy; // lastModifiedBy 객체는 제거
       }
       
-      // 업데이트된 문서 반환
-      return {
-        ...allDocuments[documentIndex],
-        ...updates,
-        updatedAt: new Date()
-      };
-    } catch (error) {
+      console.log('문서 업데이트 요청 데이터:', payload);
+      
+      const response = await apiClient.put(`/${slug}`, payload);
+      return transformDocumentResponse(response.data.data);
+    } catch (error: any) {
       console.error(`Error updating wiki document ${slug}:`, error);
+      
+      // 서버 응답에 에러 메시지가 있으면 로그에 출력
+      if (error.response && error.response.data) {
+        console.error('서버 응답 상세 오류:', error.response.data);
+        
+        // 서버에서 메시지를 반환했다면 그것을 사용
+        if (error.response.data.message || error.response.data.error) {
+          throw new Error(error.response.data.message || error.response.data.error);
+        }
+      }
+      
       throw error;
     }
   },
@@ -344,11 +249,7 @@ const wikiService = {
    */
   deleteDocument: async (slug: string): Promise<boolean> => {
     try {
-      // 실제 API 호출
-      // await apiClient.delete(`/${slug}`);
-      // return true;
-      
-      // 더미 응답
+      await apiClient.delete(`/${slug}`);
       return true;
     } catch (error) {
       console.error(`Error deleting wiki document ${slug}:`, error);
@@ -366,39 +267,11 @@ const wikiService = {
    */
   getRevisions: async (slug: string): Promise<Revision[]> => {
     try {
-      // 실제 API 호출
-      // const response = await apiClient.get(`/${slug}/revisions`);
-      // return response.data;
-      
-      // 더미 데이터
-      return [
-        {
-          id: 'rev1',
-          documentId: slug,
-          content: '초기 버전의 내용...',
-          createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30일 전
-          createdBy: { id: 'user1', username: 'RobotMaster', email: 'master@example.com', role: 'user' },
-          comment: '문서 생성'
-        },
-        {
-          id: 'rev2',
-          documentId: slug,
-          content: '두 번째 버전의 내용...',
-          diff: '내용 추가 및 수정...',
-          createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000), // 15일 전
-          createdBy: { id: 'user2', username: 'TechGuru', email: 'guru@example.com', role: 'user' },
-          comment: '내용 추가 및 오타 수정'
-        },
-        {
-          id: 'rev3',
-          documentId: slug,
-          content: '최신 버전의 내용...',
-          diff: '이미지 추가 및 내용 업데이트...',
-          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2일 전
-          createdBy: { id: 'user3', username: 'CodeNinja', email: 'ninja@example.com', role: 'user' },
-          comment: '이미지 추가 및 내용 업데이트'
-        }
-      ];
+      const response = await apiClient.get(`/${slug}/revisions`);
+      return response.data.data.map((rev: any) => ({
+        ...rev,
+        createdAt: new Date(rev.createdAt),
+      }));
     } catch (error) {
       console.error(`Error fetching revisions for ${slug}:`, error);
       throw error;
@@ -415,57 +288,16 @@ const wikiService = {
    */
   getDiscussions: async (slug: string): Promise<Discussion[]> => {
     try {
-      // 실제 API 호출
-      // const response = await apiClient.get(`/${slug}/discussions`);
-      // return response.data;
-      
-      // 더미 데이터
-      return [
-        {
-          id: 'disc1',
-          documentId: slug,
-          title: '내용 추가 제안',
-          createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10일 전
-          createdBy: { id: 'user1', username: 'RobotMaster', email: 'master@example.com', role: 'user' },
-          status: 'resolved',
-          comments: [
-            {
-              id: 'comm1',
-              discussionId: 'disc1',
-              content: '이 문서에 XX 내용을 추가하면 좋을 것 같습니다.',
-              createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-              updatedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-              createdBy: { id: 'user1', username: 'RobotMaster', email: 'master@example.com', role: 'user' }
-            },
-            {
-              id: 'comm2',
-              discussionId: 'disc1',
-              content: '좋은 제안입니다. 내용을 추가하겠습니다.',
-              createdAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000),
-              updatedAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000),
-              createdBy: { id: 'user2', username: 'TechGuru', email: 'guru@example.com', role: 'user' }
-            }
-          ]
-        },
-        {
-          id: 'disc2',
-          documentId: slug,
-          title: '오류 수정 요청',
-          createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5일 전
-          createdBy: { id: 'user3', username: 'CodeNinja', email: 'ninja@example.com', role: 'user' },
-          status: 'open',
-          comments: [
-            {
-              id: 'comm3',
-              discussionId: 'disc2',
-              content: 'XX 부분에 오류가 있습니다. YY로 수정이 필요합니다.',
-              createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-              updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-              createdBy: { id: 'user3', username: 'CodeNinja', email: 'ninja@example.com', role: 'user' }
-            }
-          ]
-        }
-      ];
+      const response = await apiClient.get(`/${slug}/discussions`);
+      return response.data.data.map((disc: any) => ({
+        ...disc,
+        createdAt: new Date(disc.createdAt),
+        updatedAt: new Date(disc.updatedAt),
+        comments: disc.comments.map((comment: any) => ({
+          ...comment,
+          createdAt: new Date(comment.createdAt),
+        })),
+      }));
     } catch (error) {
       console.error(`Error fetching discussions for ${slug}:`, error);
       throw error;
@@ -483,30 +315,12 @@ const wikiService = {
    */
   search: async (query: string, options?: Partial<WikiListOptions>): Promise<SearchResult[]> => {
     try {
-      // 실제 API 호출
-      // const response = await apiClient.get('/search', { params: { query, ...options } });
-      // return response.data;
-      
-      // 더미 검색 결과
-      const allDocuments = [...DUMMY_POPULAR_DOCUMENTS, ...DUMMY_RECENT_DOCUMENTS];
-      
-      // 간단한 검색 로직 (제목이나 내용에 검색어가 포함된 문서)
-      const results = allDocuments
-        .filter(doc => 
-          doc.title.toLowerCase().includes(query.toLowerCase()) || 
-          doc.content.toLowerCase().includes(query.toLowerCase())
-        )
-        .map(doc => ({
-          id: doc.id,
-          title: doc.title,
-          slug: doc.slug,
-          excerpt: doc.content.substring(0, 100) + '...',
-          categories: doc.categories,
-          updatedAt: doc.updatedAt,
-          relevance: 1.0 // 실제로는 서버에서 관련성 점수 계산
-        }));
-      
-      return results;
+      const response = await apiClient.get('/search', { params: { query, ...options } });
+      return response.data.data.map((result: any) => ({
+        ...result,
+        createdAt: new Date(result.createdAt),
+        updatedAt: new Date(result.updatedAt),
+      }));
     } catch (error) {
       console.error(`Error searching wiki for "${query}":`, error);
       throw error;
@@ -522,17 +336,58 @@ const wikiService = {
    */
   getCategories: async (): Promise<Category[]> => {
     try {
-      // 실제 API 호출
-      // const response = await apiClient.get('/categories');
-      // return response.data;
-      
-      // 더미 데이터
-      return DUMMY_CATEGORIES;
+      const response = await apiClient.get('/categories');
+      return response.data.data;
     } catch (error) {
       console.error('Error fetching categories:', error);
       throw error;
     }
   }
+};
+
+// 백엔드 응답을 위키 문서 형식으로 변환하는 함수
+const transformDocumentResponse = (doc: any): WikiDocument => {
+  if (!doc) return doc;
+  
+  // 디버그용 로깅
+  console.log('API 응답 데이터:', doc);
+  
+  // 일관된 카테고리 처리: 항상 Category 객체 배열로 처리
+  const categories = Array.isArray(doc.categories) ? doc.categories : [];
+  
+  // 누락될 수 있는 필드들에 대한 안전한 처리
+  const transformedDoc = {
+    ...doc,
+    id: doc.id || '',
+    slug: doc.slug || '',
+    title: doc.title || '',
+    content: doc.content || '',
+    createdAt: doc.createdAt ? new Date(doc.createdAt) : new Date(),
+    updatedAt: doc.updatedAt ? new Date(doc.updatedAt) : new Date(),
+    createdBy: doc.createdBy || { id: '', name: '알 수 없음', email: '', role: '' },
+    lastModifiedBy: doc.lastModifiedBy || { id: '', name: '알 수 없음', email: '', role: '' },
+    viewCount: doc.viewCount || 0,
+    // 카테고리 처리
+    categories: categories.map((cat: any) => {
+      if (typeof cat === 'object' && cat !== null) {
+        return {
+          id: cat.id || '',
+          name: cat.name || '알 수 없음',
+          slug: cat.slug || 'unknown',
+          description: cat.description || ''
+        };
+      }
+      return {
+        id: cat || '',
+        name: '알 수 없음',
+        slug: 'unknown',
+        description: ''
+      };
+    })
+  };
+  
+  console.log('변환된 문서:', transformedDoc);
+  return transformedDoc;
 };
 
 export default wikiService; 

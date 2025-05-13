@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import Image from 'next/image';
-import { initializeAuth } from '@/lib/auth';
+import { loadUserProfile, useAuthStore } from '@/lib/auth';
 
 export default function AuthLayout({
   children,
@@ -11,7 +11,14 @@ export default function AuthLayout({
 }) {
   // 인증 상태 초기화
   useEffect(() => {
-    initializeAuth();
+    const loadUserData = async () => {
+      await loadUserProfile();
+    };
+    
+    // 토큰이 있으면 사용자 정보 로드
+    if (useAuthStore.getState().token) {
+      loadUserData();
+    }
   }, []);
 
   return (

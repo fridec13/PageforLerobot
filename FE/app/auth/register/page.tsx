@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -12,9 +12,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertCircle } from 'lucide-react';
-import apiClient from '@/lib/services/apiClient';
 
-// 라우터를 사용하는 컴포넌트를 분리
+// 회원가입 폼 컴포넌트
 function RegisterForm() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -22,10 +21,9 @@ function RegisterForm() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [validationError, setValidationError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   
   const router = useRouter();
-  const { isAuthenticated, error, clearError } = useAuthStore();
+  const { register, isAuthenticated, isLoading, error, clearError } = useAuthStore();
 
   // 이미 로그인한 경우 홈으로 리디렉션
   useEffect(() => {
@@ -71,28 +69,18 @@ function RegisterForm() {
     }
     
     setValidationError('');
-    setIsLoading(true);
     
     // 회원가입 시도
-    try {
-      const response = await apiClient.post('/auth/register', {
-        name: username,
-        email,
-        password,
-        confirmPassword
-      });
-      
-      if (response.data.success) {
-        // 회원가입 성공 메시지와 함께 로그인 페이지로 이동
-        router.push('/auth/login?registered=true');
-      } else {
-        setValidationError(response.data.error || '회원가입 처리 중 오류가 발생했습니다.');
-      }
-    } catch (error: any) {
-      setValidationError(error.response?.data?.error || '회원가입 중 오류가 발생했습니다.');
-      console.error('Registration error:', error);
-    } finally {
-      setIsLoading(false);
+    const success = await register({
+      name: username,
+      email,
+      password,
+      confirmPassword
+    });
+    
+    if (success) {
+      // 회원가입 성공 메시지와 함께 로그인 페이지로 이동
+      router.push('/auth/login?registered=true');
     }
   };
 
@@ -221,15 +209,7 @@ function RegisterForm() {
   );
 }
 
-// 메인 컴포넌트에서 Suspense로 감싸기
+// 메인 컴포넌트
 export default function RegisterPage() {
-  return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center min-h-[calc(100vh-16rem)]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    }>
-      <RegisterForm />
-    </Suspense>
-  );
+  return <RegisterForm />;
 } 

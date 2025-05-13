@@ -21,9 +21,28 @@ export interface WikiDocument {
   createdBy: User;        // 최초 작성자
   lastModifiedBy: User;   // 마지막 수정자
   viewCount: number;      // 조회수
-  categories: Category[]; // 문서 카테고리
+  categories: Category[]; // 문서 카테고리 (객체 배열)
   revisions?: Revision[]; // 수정 이력
   discussions?: Discussion[]; // 토론
+}
+
+// API 요청용 DTO 인터페이스
+export interface CreateWikiDTO {
+  title: string;
+  slug: string;
+  content: string;
+  categories: string[];   // 카테고리 ID 배열
+  userId?: string;        // 사용자 ID (백엔드에서 필요)
+  createdBy?: Partial<User>; // 사용자 객체 (UI 로직용)
+}
+
+export interface UpdateWikiDTO {
+  title?: string;
+  content?: string;
+  categories?: string[];   // 카테고리 ID 배열
+  comment?: string;       // 수정 이유
+  userId?: string;        // 사용자 ID (백엔드에서 필요)
+  lastModifiedBy?: Partial<User> | string; // 사용자 객체 또는 ID
 }
 
 // 문서 수정 이력
@@ -71,12 +90,12 @@ export interface Category {
 // 사용자 인터페이스 (간소화 버전, auth.ts의 User와 통합 필요)
 export interface User {
   id: string;
-  username: string;
+  name?: string;        // username에서 name으로 변경
   email: string;
   role: string;
   title?: string;         // 칭호
-  profileImage?: string;  // 프로필 이미지
-  contributions?: number; // 기여 횟수
+  image?: string;         // profileImage에서 image로 변경
+  contribution?: number;  // contributions에서 contribution으로 변경
 }
 
 // 검색 결과 인터페이스

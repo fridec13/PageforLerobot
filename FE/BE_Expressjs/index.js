@@ -2,7 +2,7 @@ const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const { requestLogger, errorLogger } = require('./src/middleware/logger');
+const { requestLogger, errorLogger } = require('./src/middlewares/logger');
 const swaggerUi = require('swagger-ui-express');
 const YAML = require('yamljs');
 const swaggerDocument = YAML.load('./swagger.yaml');
@@ -16,15 +16,17 @@ const prisma = new PrismaClient();
 // 라우터 가져오기
 const authRoutes = require('./src/routes/authRoutes');
 const userRoutes = require('./src/routes/userRoutes');
+const wikiRoutes = require('./src/routes/wikiRoutes');
+const docsRoutes = require('./src/routes/docsRoutes');
 
 const app = express();
 
 // 미들웨어 설정
 app.use(express.json());
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: ['Authorization'],
   preflightContinue: false,
@@ -40,6 +42,8 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 // API 경로 설정
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/wiki', wikiRoutes);
+app.use('/api/docs', docsRoutes);
 
 // 건강 체크 엔드포인트
 app.get('/api/health', (req, res) => {
@@ -55,9 +59,29 @@ app.use(errorLogger);
 // 에러 핸들러
 app.use((err, req, res, next) => {
   console.error('Error:', err);
-  res.status(500).json({
+  
+  // Prisma 에러 처리
+  if (err.name === 'PrismaClientKnownRequestError') {
+    if (err.code === 'P2002') {
+      return res.status(409).json({
+        success: false,
+        error: '중복된 값이 존재합니다.'
+      });
+    } else if (err.code === 'P2025') {
+      return res.status(404).json({
+        success: false,
+        error: '요청하신 리소스를 찾을 수 없습니다.'
+      });
+    }
+  }
+  
+  // 커스텀 에러 상태 코드 처리
+  const statusCode = err.statusCode || 500;
+  const errorMessage = statusCode === 500 ? '서버에 문제가 발생했습니다.' : err.message;
+  
+  res.status(statusCode).json({
     success: false,
-    error: '서버에 문제가 발생했습니다.'
+    error: errorMessage
   });
 });
 
