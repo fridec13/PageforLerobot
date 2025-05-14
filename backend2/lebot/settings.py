@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "corsheaders",
     "board",
     "rest_framework",
     "storages",
@@ -49,6 +50,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -128,6 +130,9 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# 요청 본문의 최대 크기 (10MB)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+
 JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
 JWT_ALGORITHM = "HS256"
 
@@ -144,4 +149,42 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'board.authentication.ExternalJWTAuthentication',
     ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,  # 한 페이지에 보여줄 아이템 수
+    # 'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'], # 필터링 사용 시
 }
+
+# CORS Settings
+# 개발 환경에서는 True로 설정하여 모든 출처를 허용할 수 있습니다.
+CORS_ALLOW_ALL_ORIGINS = True 
+
+# 프로덕션 환경에서는 아래와 같이 특정 출처만 허용하는 것이 안전합니다.
+# CORS_ALLOWED_ORIGINS = [
+# "http://localhost:3000", # 예: 로컬 프론트엔드 개발 서버
+# "http://127.0.0.1:3000", # 예: 로컬 프론트엔드 개발 서버
+# "https://your-frontend-app.com", # 예: 배포된 프론트엔드 서비스 주소
+# ]
+
+# 쿠키를 포함한 요청을 허용하려면 True로 설정합니다.
+CORS_ALLOW_CREDENTIALS = True
+
+# 허용할 HTTP 메소드 (필요에 따라 추가/수정)
+# CORS_ALLOW_METHODS = [
+#     "DELETE",
+#     "GET",
+#     "OPTIONS",
+#     "PATCH",
+#     "POST",
+#     "PUT",
+# ]
+
+# 허용할 HTTP 헤더 (필요에 따라 추가/수정, Authorization 헤더는 중요)
+# CORS_ALLOW_HEADERS = [
+#     "accept",
+#     "authorization", # JWT 토큰 등을 위해 필요
+#     "content-type",
+#     "origin",
+#     "user-agent",
+#     "x-csrftoken",
+#     "x-requested-with",
+# ]

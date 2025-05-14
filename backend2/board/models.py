@@ -12,7 +12,7 @@ class Post(models.Model):    # 게시글
     title = models.CharField(max_length=200)
     board = models.ForeignKey(Board, on_delete=models.SET_NULL, null=True, blank=True, related_name="posts")
     content = models.TextField()
-    # user_id = models.IntegerField(db_index=True)
+    user_id = models.IntegerField(db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     view_count = models.PositiveIntegerField(default=0)
