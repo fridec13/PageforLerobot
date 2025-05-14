@@ -108,7 +108,7 @@ export default function WikiPage() {
 
   return (
     <div>
-      <p className="text-muted-foreground mb-8">
+      <p className="text-muted-foreground mb-6 md:mb-8 text-sm md:text-base">
         Robo<span className="text-blue-500">SSAFY</span>ens 위키는 로봇 관련 지식을 함께 만들어가는 공간입니다. 
         누구나 문서를 자유롭게 편집하고 수정할 수 있으며, 모든 기여는 기록됩니다.
       </p>
@@ -119,30 +119,30 @@ export default function WikiPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
             <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                   <Star className="h-5 w-5 text-yellow-500" />
                   인기 위키 문서
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs md:text-sm">
                   가장 많이 읽히는 문서들입니다
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2">
+                <ul className="space-y-1 md:space-y-2">
                   {popularDocuments.map((doc) => (
-                    <li key={doc.id} className="p-2 hover:bg-muted/50 rounded transition-colors">
+                    <li key={doc.id} className="p-2 hover:bg-muted/50 rounded transition-colors text-sm md:text-base">
                       <Link href={`/wiki/${doc.slug}`} className="text-blue-600 hover:text-blue-800 flex items-center">
-                        <FileText className="mr-2 h-4 w-4" />
-                        {doc.title}
+                        <FileText className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+                        <span className="truncate mr-1">{doc.title}</span>
                         {doc.categories && doc.categories[0] && (
-                          <Badge className={`ml-2 bg-${getBadgeColor(doc.categories[0].slug)}-100 text-${getBadgeColor(doc.categories[0].slug)}-800 hover:bg-${getBadgeColor(doc.categories[0].slug)}-200`}>
+                          <Badge className={`ml-1 md:ml-2 text-xs md:text-sm bg-${getBadgeColor(doc.categories[0].slug)}-100 text-${getBadgeColor(doc.categories[0].slug)}-800 hover:bg-${getBadgeColor(doc.categories[0].slug)}-200`}>
                             {doc.categories[0].name}
                           </Badge>
                         )}
-                        <ArrowRight className="ml-auto h-4 w-4 text-muted-foreground" />
+                        <ArrowRight className="ml-auto h-3 w-3 md:h-4 md:w-4 text-muted-foreground flex-shrink-0" />
                       </Link>
                     </li>
                   ))}
@@ -151,16 +151,16 @@ export default function WikiPage() {
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                   <PlusCircle className="h-5 w-5 text-green-500" />
                   새로 생긴 문서
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2">
+                <ul className="space-y-1 md:space-y-2">
                   {newDocuments.map((doc) => (
-                    <li key={doc.id} className="flex items-center gap-3 py-2">
+                    <li key={doc.id} className="flex items-center gap-2 md:gap-3 py-1 md:py-2 text-sm md:text-base">
                       <div className="flex flex-col flex-1 min-w-0">
                         <Link href={`/wiki/${doc.slug}`} className="text-blue-600 hover:text-blue-800 truncate">
                           {doc.title}
@@ -177,21 +177,21 @@ export default function WikiPage() {
             </Card>
           </div>
           
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="mb-6 md:mb-8">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                 <Clock className="h-5 w-5 text-blue-500" />
                 최근 수정된 문서
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
                 {recentDocuments.map((doc) => (
-                  <div key={doc.id} className="p-3 border rounded-lg hover:bg-muted/30 transition-colors">
-                    <Link href={`/wiki/${doc.slug}`} className="text-blue-600 hover:text-blue-800 font-medium block truncate">
+                  <div key={doc.id} className="p-2 md:p-3 border rounded-lg hover:bg-muted/30 transition-colors">
+                    <Link href={`/wiki/${doc.slug}`} className="text-blue-600 hover:text-blue-800 font-medium block truncate text-sm md:text-base">
                       {doc.title}
                     </Link>
-                    <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                    <div className="flex items-center justify-between mt-1 md:mt-2 text-xs text-muted-foreground">
                       <span className="flex items-center">
                         <Clock className="mr-1 h-3 w-3" />
                         {formatTimeAgo(doc.updatedAt)}
@@ -199,7 +199,7 @@ export default function WikiPage() {
                       {doc.lastModifiedBy && (
                         <div className="flex items-center gap-1">
                           <span>{doc.lastModifiedBy.name?.substring(0, 8) || "알수없음"}</span>
-                          <Avatar className="h-5 w-5">
+                          <Avatar className="h-4 w-4 md:h-5 md:w-5">
                             <AvatarFallback className={`bg-${getAvatarColor(doc.lastModifiedBy.name)}-100 text-${getAvatarColor(doc.lastModifiedBy.name)}-800 text-xs`}>
                               {getInitials(doc.lastModifiedBy.name)}
                             </AvatarFallback>
@@ -213,19 +213,19 @@ export default function WikiPage() {
             </CardContent>
           </Card>
 
-          <Separator className="my-8" />
+          <Separator className="my-6 md:my-8" />
 
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+          <div className="mb-6 md:mb-8">
+            <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 flex items-center gap-2">
               <Tags className="h-5 w-5 text-blue-500" />
               카테고리
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
               {categories.map((category) => (
                 <Link 
                   key={category.id} 
                   href={`/wiki/category/${category.slug}`} 
-                  className={`bg-${getBadgeColor(category.slug)}-100 text-${getBadgeColor(category.slug)}-800 hover:bg-${getBadgeColor(category.slug)}-200 transition-colors p-3 rounded-lg text-center`}
+                  className={`bg-${getBadgeColor(category.slug)}-100 text-${getBadgeColor(category.slug)}-800 hover:bg-${getBadgeColor(category.slug)}-200 transition-colors p-2 md:p-3 rounded-lg text-center text-sm md:text-base`}
                 >
                   {category.name}
                 </Link>
@@ -234,28 +234,28 @@ export default function WikiPage() {
           </div>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                 <Users className="h-5 w-5 text-blue-500" />
                 최근 기여자
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-3">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-blue-100 text-blue-800">JK</AvatarFallback>
+              <div className="flex flex-wrap gap-2 md:gap-3">
+                <Avatar className="h-7 w-7 md:h-8 md:w-8">
+                  <AvatarFallback className="bg-blue-100 text-blue-800 text-xs">JK</AvatarFallback>
                 </Avatar>
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-green-100 text-green-800">MS</AvatarFallback>
+                <Avatar className="h-7 w-7 md:h-8 md:w-8">
+                  <AvatarFallback className="bg-green-100 text-green-800 text-xs">MS</AvatarFallback>
                 </Avatar>
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-purple-100 text-purple-800">YJ</AvatarFallback>
+                <Avatar className="h-7 w-7 md:h-8 md:w-8">
+                  <AvatarFallback className="bg-purple-100 text-purple-800 text-xs">YJ</AvatarFallback>
                 </Avatar>
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-orange-100 text-orange-800">DH</AvatarFallback>
+                <Avatar className="h-7 w-7 md:h-8 md:w-8">
+                  <AvatarFallback className="bg-orange-100 text-orange-800 text-xs">DH</AvatarFallback>
                 </Avatar>
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-red-100 text-red-800">SJ</AvatarFallback>
+                <Avatar className="h-7 w-7 md:h-8 md:w-8">
+                  <AvatarFallback className="bg-red-100 text-red-800 text-xs">SJ</AvatarFallback>
                 </Avatar>
               </div>
             </CardContent>

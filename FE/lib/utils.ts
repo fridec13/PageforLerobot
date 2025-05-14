@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import * as THREE from "three"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -18,6 +19,79 @@ export function formatDate(date: Date): string {
   const minutes = String(date.getMinutes()).padStart(2, '0');
 
   return `${year}-${month}-${day} ${hours}:${minutes}`;
+}
+
+// ---------------------------- //
+// URDF 관련 타입과 유틸리티 함수 //
+// ---------------------------- //
+
+/**
+ * URDF 로봇 모델을 나타내는 인터페이스
+ * 향후 urdf-loader 라이브러리와 통합될 예정
+ */
+export interface URDFRobot extends Omit<THREE.Object3D, 'name'> {
+  isRobot?: boolean;
+  joints?: Record<string, {
+    name: string;
+    type: string;
+    axis?: THREE.Vector3;
+    limit?: {
+      lower: number;
+      upper: number;
+    };
+    angle?: number;
+    setAngle: (angle: number) => void;
+    [key: string]: any;
+  }>;
+  links?: Record<string, THREE.Object3D>;
+  position: THREE.Vector3;
+  rotation: THREE.Euler;
+  name?: string;
+}
+
+/**
+ * URDF 파일을 로드하고 Three.js 씬에 추가하는 함수
+ * 현재는 구현되지 않았으며, 향후 추가될 예정
+ * 
+ * @param urdfPath - URDF 파일 경로
+ * @param scene - Three.js 씬
+ * @param onLoad - 로드 완료 시 콜백
+ */
+export function loadURDFModel(
+  urdfPath: string,
+  scene: THREE.Scene,
+  onLoad: (robot: URDFRobot) => void
+): void {
+  console.warn('URDF 로더 기능은 아직 구현되지 않았습니다.');
+  
+  // 임시 로봇 생성 (구현 예정)
+  const robot = new THREE.Group() as URDFRobot;
+  robot.isRobot = true;
+  robot.name = 'Sample Robot';
+  
+  // 실제 구현에서는 urdf-loader 라이브러리를 사용하여 URDF 파일 로드
+  onLoad(robot);
+}
+
+/**
+ * 관절 각도를 설정하는 함수
+ * 현재는 구현되지 않았으며, 향후 추가될 예정
+ * 
+ * @param robot - URDF 로봇 모델
+ * @param jointValues - 관절 각도 값 배열
+ */
+export function setJointAngles(robot: URDFRobot, jointValues: number[]): void {
+  if (!robot || !robot.joints) return;
+  
+  // 실제 구현에서는 로봇 모델의 각 관절에 각도 값 설정
+  Object.keys(robot.joints).forEach((jointName, index) => {
+    if (index < jointValues.length && robot.joints) {
+      const joint = robot.joints[jointName];
+      if (joint && typeof joint.setAngle === 'function') {
+        joint.setAngle(THREE.MathUtils.degToRad(jointValues[index]));
+      }
+    }
+  });
 }
 
 /**

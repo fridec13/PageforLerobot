@@ -84,10 +84,10 @@ export default function WikiLayout({ children }: WikiLayoutProps) {
   }
   
   return (
-    <div className="max-w-5xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-3 flex-1">
-          <h1 className="text-3xl font-bold truncate max-w-md">
+    <div className="max-w-6xl mx-auto">
+      <div className="flex flex-wrap justify-between items-center gap-y-4 mb-6">
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <h1 className="text-2xl md:text-3xl font-bold truncate max-w-[280px] md:max-w-md">
             {isMainWikiPage && "위키에 오신 것을 환영합니다"}
             {isSearchPage && "위키 검색"}
             {isDetailPage && documentTitle ? documentTitle : (!isMainWikiPage && !isSearchPage && "위키")}
@@ -109,26 +109,29 @@ export default function WikiLayout({ children }: WikiLayoutProps) {
             </div>
           )}
         </div>
-        <form onSubmit={handleSearch} className="flex items-center gap-2 flex-1 max-w-lg ml-4">
+        <form onSubmit={handleSearch} className="flex w-full md:w-auto items-center gap-2">
           <Button 
             type="button"
             onClick={handleCreateDocument}
             variant="outline"
-            size="icon"
+            className="flex items-center gap-1 whitespace-nowrap"
+            size="sm"
             title="새 문서 작성"
           >
             <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">새 문서</span>
+            <span className="sm:hidden">문서</span>
           </Button>
-          <div className="relative flex-1">
+          <div className="relative flex-1 max-w-[200px] sm:max-w-xs">
             <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              className="pl-8" 
+              className="pl-8 h-9" 
               placeholder="위키 검색..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button type="submit" variant="default" size="icon">
+          <Button type="submit" variant="default" size="sm" className="h-9 px-2">
             <Search className="h-4 w-4" />
           </Button>
         </form>

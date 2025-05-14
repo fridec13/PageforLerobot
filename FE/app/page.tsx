@@ -54,7 +54,7 @@ export default function Home() {
                 roboDK, onshape, ROS2 등 로봇 관련 기술 문서를 제공합니다. 변경 사항을 제안할 수 있습니다.
               </p>
               <div className="mt-3">
-                <Link href="/docs/robodk" className="text-primary text-sm flex items-center group-hover:underline">
+                <Link href="/docs" className="text-primary text-sm flex items-center group-hover:underline">
                   바로가기 <ChevronRight className="h-4 w-4 ml-1" />
                 </Link>
               </div>
@@ -71,7 +71,7 @@ export default function Home() {
                 Q&A 형태로 질문하고 답변을 받을 수 있는 공간입니다. 활동을 통해 포인트를 얻을 수 있습니다.
               </p>
               <div className="mt-3">
-                <Link href="/forum/topics" className="text-primary text-sm flex items-center group-hover:underline">
+                <Link href="/forum" className="text-primary text-sm flex items-center group-hover:underline">
                   바로가기 <ChevronRight className="h-4 w-4 ml-1" />
                 </Link>
               </div>
@@ -108,7 +108,7 @@ export default function Home() {
                 3D 모델을 통해 로봇을 시뮬레이션하고 제어할 수 있는 공간입니다.
               </p>
               <div className="mt-3">
-                <Link href="/robocon/offsetsim" className="text-primary text-sm flex items-center group-hover:underline">
+                <Link href="/robocon" className="text-primary text-sm flex items-center group-hover:underline">
                   바로가기 <ChevronRight className="h-4 w-4 ml-1" />
                 </Link>
               </div>
