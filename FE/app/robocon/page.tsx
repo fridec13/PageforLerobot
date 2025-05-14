@@ -4,7 +4,7 @@ import Link from "next/link"
 
 export default function RoboconPage() {
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-6xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">ROBOCON</h1>
       <p className="text-gray-600 mb-8">
         로봇 시뮬레이션 및 제어를 위한 도구들을 제공합니다. 3D 모델을 확인하고 로봇을 원격으로 제어해보세요.

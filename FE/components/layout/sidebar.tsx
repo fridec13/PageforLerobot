@@ -36,6 +36,15 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps) {
     setIsMobileOpen(false);
   }, [pathname, setIsMobileOpen]);
 
+  // 현재 경로에 따라 활성 섹션 설정
+  useEffect(() => {
+    const activeSection = getActiveSection();
+    if (activeSection) {
+      // 이전 상태를 모두 지우고 현재 활성 섹션만 열기
+      setOpenItems({ [activeSection]: true });
+    }
+  }, [pathname]);
+
   const menus: Menu[] = [
     {
       name: "WIKI",
@@ -63,7 +72,6 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps) {
         { name: "users", path: "/forum/users" },
         { name: "badge", path: "/forum/badge" },
         { name: "groups", path: "/forum/groups" },
-        { name: "about", path: "/forum/about" },
       ],
     },
     {
@@ -103,6 +111,19 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps) {
     }
   }
 
+  // 메뉴 토글 함수
+  const toggleSubmenu = (menuName: string, event: React.MouseEvent) => {
+    event.preventDefault();
+    // 현재 메뉴만 토글하되, 다른 메뉴는 모두 닫기
+    setOpenItems(prev => {
+      const isCurrentlyOpen = prev[menuName];
+      // 현재 메뉴가 열려 있으면 닫고, 닫혀 있으면 다른 메뉴를 모두 닫고 현재 메뉴만 열기
+      return isCurrentlyOpen 
+        ? { ...prev, [menuName]: false }
+        : { [menuName]: true };
+    });
+  }
+
   return (
     <>
       {/* 모바일 오버레이 백드롭 */}
@@ -130,74 +151,66 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps) {
         <ScrollArea className="h-[calc(100%-56px)] lg:h-full">
           <div className="p-4 flex flex-col h-full justify-between">
             <div className="space-y-4">
-              <Accordion 
-                type="single" 
-                collapsible 
-                defaultValue={activeSection}
-                className="space-y-2"
-                onValueChange={handleValueChange}
-              >
+              <div className="space-y-2">
                 {menus.map((menu) => (
-                  <AccordionItem 
-                    key={menu.name} 
-                    value={menu.name}
-                    className="border-0"
-                  >
-                    {menu.submenus ? (
-                      <>
-                        <AccordionTrigger 
-                          className={cn(
-                            "flex items-center p-2 rounded-md transition-colors data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-primary",
-                            isActive(menu.path) 
-                              ? "bg-sidebar-accent text-sidebar-primary font-medium" 
-                              : "hover:bg-sidebar-accent/80"
-                          )}
-                        >
-                          <div className="flex items-center">
-                            <span className="w-6 flex justify-center">{menu.icon}</span>
-                            <span className="ml-2">{menu.name}</span>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="pt-1 pb-0 sidebar-accordion-content">
-                          <div className="pl-8 space-y-0.5">
-                            {menu.submenus.map((submenu, index) => (
-                              <Link
-                                key={submenu.name}
-                                href={submenu.path}
-                                className={cn(
-                                  "block px-2 py-1.5 rounded-md text-sm transition-colors sidebar-submenu-item",
-                                  pathname === submenu.path 
-                                    ? "bg-sidebar-accent text-sidebar-primary font-medium" 
-                                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60"
-                                )}
-                                style={{ 
-                                  animationDelay: `${index * 50}ms`,
-                                  animationPlayState: openItems[menu.name] ? 'running' : 'paused'
-                                }}
-                              >
-                                {submenu.name}
-                              </Link>
-                            ))}
-                          </div>
-                        </AccordionContent>
-                      </>
-                    ) : (
+                  <div key={menu.name} className="border-0">
+                    <div className="flex items-center">
+                      {/* 메인 메뉴 링크 */}
                       <Link
                         href={menu.path}
                         className={cn(
-                          "flex items-center p-2 rounded-md transition-colors font-medium",
+                          "flex-grow flex items-center p-2 rounded-md transition-colors",
                           isActive(menu.path) 
-                            ? "bg-sidebar-accent text-sidebar-primary" 
-                            : "hover:bg-sidebar-accent/80"
+                            ? "bg-blue-500 text-white font-medium" 
+                            : "hover:bg-blue-100 text-gray-700"
                         )}
                       >
                         <span className="w-6 flex justify-center">{menu.icon}</span>
                         <span className="ml-2">{menu.name}</span>
                       </Link>
+                      
+                      {/* 하위 메뉴가 있는 경우 토글 버튼 추가
+                      {menu.submenus && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="w-8 h-8 ml-1"
+                          onClick={(e) => toggleSubmenu(menu.name, e)}
+                        >
+                          {openItems[menu.name] ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )} */}
+                    </div>
+                    
+                    {/* 하위 메뉴 표시 */}
+                    {menu.submenus && openItems[menu.name] && (
+                      <div className="pl-8 space-y-0.5 pt-1 pb-1 sidebar-accordion-content">
+                        {menu.submenus.map((submenu, index) => (
+                          <Link
+                            key={submenu.name}
+                            href={submenu.path}
+                            className={cn(
+                              "block px-2 py-1.5 rounded-md text-sm transition-colors sidebar-submenu-item",
+                              pathname === submenu.path 
+                                ? "bg-blue-100 text-blue-600 font-medium" 
+                                : "text-gray-700 hover:bg-blue-50"
+                            )}
+                            style={{ 
+                              animationDelay: `${index * 50}ms`
+                            }}
+                          >
+                            {submenu.name}
+                          </Link>
+                        ))}
+                      </div>
                     )}
-                  </AccordionItem>
+                  </div>
                 ))}
-              </Accordion>
+              </div>
               
               <Separator className="my-4" />
               
@@ -206,9 +219,11 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps) {
                 <p className="text-xs text-sidebar-foreground/70 mb-3">
                   로봇 지식 공유에 참여하고 특별한 칭호를 획득하세요.
                 </p>
-                <Button variant="outline" size="sm" className="w-full justify-start text-blue-500">
-                  <BookOpen className="h-3.5 w-3.5 mr-1" />
-                  위키에 기여하기
+                <Button variant="outline" size="sm" className="w-full justify-start text-blue-500" asChild>
+                  <Link href="/wiki/create">
+                    <BookOpen className="h-3.5 w-3.5 mr-1" />
+                    위키에 기여하기
+                  </Link>
                 </Button>
               </div>
             </div>
@@ -216,7 +231,7 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps) {
             <div className="mt-auto pt-4">
               <Separator className="mb-4" />
               <div className="text-xs text-sidebar-foreground/60 text-center">
-                <p>&copy; {new Date().getFullYear()} HomoSSAFYens</p>
+                <p><Link href="/credits" className="hover:text-blue-500 transition-colors">&copy; {new Date().getFullYear()} HomoSSAFYens</Link></p>
                 <p className="mt-1">모든 권리 보유</p>
               </div>
             </div>

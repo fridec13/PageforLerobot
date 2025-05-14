@@ -167,7 +167,9 @@ export default function Home() {
             </p>
           </CardContent>
           <CardFooter>
-            <Button variant="default" className="w-full bg-blue-500 hover:bg-blue-600">가입하고 시작하기</Button>
+            <Button variant="default" className="w-full bg-blue-500 hover:bg-blue-600" asChild>
+              <Link href="/auth/register">가입하고 시작하기</Link>
+            </Button>
           </CardFooter>
         </Card>
       </div>
