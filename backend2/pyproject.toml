@@ -12,6 +12,7 @@ dependencies = [
     "django-storages>=1.14.6",
     "djangorestframework>=3.16.0",
     "pillow>=11.2.1",
+    "psycopg2-binary>=2.9.10",
     "pyjwt>=2.10.1",
     "python-dotenv>=1.1.0",
 ]
