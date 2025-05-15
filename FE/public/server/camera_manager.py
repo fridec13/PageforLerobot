@@ -25,9 +25,11 @@ class CameraManager:
         # 운영체제 확인 및 환경 설정
         if sys.platform.startswith('linux'):
             logger.info("Linux 환경이 감지되었습니다.")
-            # 리눅스에서는 v4l2 장치 목록을 확인할 수 있음
+            # 리눅스에서는 v4l2 장치 목록을 확인
             if os.path.exists("/dev/video0"):
                 logger.info("기본 카메라 장치가 감지되었습니다.")
+                # 초기 카메라 스캔
+                self.scan_cameras()
     
     def scan_cameras(self) -> List[Dict[str, Any]]:
         """사용 가능한 모든 카메라 스캔"""
@@ -73,6 +75,15 @@ class CameraManager:
         try:
             # 정수로 변환 (문자열로 들어올 수 있음)
             camera_index = int(camera_index)
+            camera_id = f"camera_{camera_index}"
+            
+            # 이미 연결된 카메라인 경우
+            if camera_id in self.connected_cameras:
+                return {
+                    "success": True,
+                    "message": f"카메라 {camera_index}가 이미 연결되어 있습니다",
+                    "camera_info": self.camera_info.get(camera_id, {})
+                }
             
             # 카메라 열기 시도
             cap = cv2.VideoCapture(camera_index)
@@ -117,7 +128,6 @@ class CameraManager:
             logger.info(f"카메라 {camera_index} 연결 테스트 성공")
             
             # 카메라 정보 캐싱
-            camera_id = f"camera_{camera_index}"
             self.camera_info[camera_id] = camera_info
             
             return {
@@ -270,15 +280,34 @@ class CameraManager:
         
         try:
             while not stop_event.is_set():
-                # 프레임 읽기
+                # 프레임 읽기 시도
                 ret, frame = cap.read()
                 if not ret or frame is None:
                     logger.warning(f"카메라 {camera_id}에서 프레임을 읽을 수 없습니다")
-                    break
+                    # 재시도 전에 잠시 대기
+                    time.sleep(0.1)
+                    continue
                 
-                # 여기서 필요한 프레임 처리 수행 (인코딩, 전송 등)
-                # 현재는 단순히 시뮬레이션용으로 딜레이만 추가
-                time.sleep(0.033)  # 약 30fps
+                try:
+                    # 프레임 크기 조정
+                    frame = cv2.resize(frame, (640, 480))
+                    
+                    # JPEG 품질 설정 (80%로 설정하여 전송 속도 개선)
+                    encode_params = [cv2.IMWRITE_JPEG_QUALITY, 80]
+                    _, buffer = cv2.imencode('.jpg', frame, encode_params)
+                    
+                    # 프레임 데이터를 카메라 정보에 저장
+                    if camera_id in self.camera_info:
+                        self.camera_info[camera_id]["last_frame"] = buffer.tobytes()
+                        self.camera_info[camera_id]["last_frame_time"] = time.time()
+                    
+                    # 프레임 레이트 조절 (약 30fps)
+                    time.sleep(0.033)
+                    
+                except Exception as e:
+                    logger.error(f"프레임 처리 중 오류: {str(e)}")
+                    time.sleep(0.1)
+                    continue
                 
         except Exception as e:
             logger.error(f"카메라 {camera_id} 스트리밍 중 오류: {str(e)}")
@@ -288,6 +317,17 @@ class CameraManager:
             if cap.isOpened():
                 cap.release()
             logger.info(f"카메라 {camera_id} 스트리밍 스레드 종료")
+    
+    def get_last_frame(self, camera_index: int) -> Optional[bytes]:
+        """마지막으로 캡처된 프레임 반환"""
+        camera_id = f"camera_{camera_index}"
+        if camera_id in self.camera_info:
+            # 마지막 프레임이 있고 1초 이내의 것인 경우에만 반환
+            if "last_frame" in self.camera_info[camera_id] and "last_frame_time" in self.camera_info[camera_id]:
+                last_time = self.camera_info[camera_id]["last_frame_time"]
+                if time.time() - last_time < 1.0:  # 1초 이내의 프레임만 유효
+                    return self.camera_info[camera_id]["last_frame"]
+        return None
     
     def cleanup(self):
         """모든 카메라 자원 정리"""

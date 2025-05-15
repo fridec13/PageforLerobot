@@ -46,32 +46,130 @@ export default function CameraPage() {
   }
   
   // 카메라 스트리밍 시작/중지
-  const toggleStreaming = (cameraId: string) => {
-    // 실제로 스트리밍을 처리할 코드가 여기에 들어가야 함
-    // 여기서는 상태만 변경
-    setCameras(prev => prev.map(camera => 
-      camera.id === cameraId
-        ? { ...camera, isStreaming: !camera.isStreaming }
-        : camera
-    ))
-  }
-  
-  // 카메라 스캔 (실제로는 백엔드 API나 시스템 명령어를 호출해야 함)
-  const scanForCameras = () => {
-    // 시뮬레이션 목적으로 추가 카메라를 발견한 것처럼 동작
-    const newCamera = { 
-      id: `cam${cameras.length + 1}`, 
-      name: `newCamera${cameras.length + 1}`, 
-      port: `/dev/video${cameras.length * 2}`, 
-      index: cameras.length * 2, 
-      resolution: "640x480", 
-      fps: 30, 
-      isActive: false, 
-      isStreaming: false 
+  const toggleStreaming = async (cameraId: string) => {
+    const camera = cameras.find(cam => cam.id === cameraId);
+    if (!camera) return;
+
+    try {
+      if (!camera.isStreaming) {
+        // 웹소켓 연결
+        const ws = new WebSocket(`ws://localhost:8000/ws`);
+        
+        ws.onopen = () => {
+          // 카메라 스트림 시작 요청
+          ws.send(JSON.stringify({
+            type: "start_camera_stream",
+            index: camera.index
+          }));
+        };
+
+        ws.onmessage = (event) => {
+          const message = JSON.parse(event.data);
+          
+          if (message.type === "camera_stream" && message.image) {
+            // Base64 이미지를 비디오 스트림으로 변환
+            const videoElement = videoRefs.current[cameraId];
+            if (videoElement) {
+              const img = new Image();
+              img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = 640;
+                canvas.height = 480;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                  ctx.drawImage(img, 0, 0);
+                  // @ts-ignore
+                  videoElement.srcObject = canvas.captureStream(30);
+                  videoElement.play();
+                }
+              };
+              img.src = `data:image/jpeg;base64,${message.image}`;
+            }
+          }
+        };
+
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
+          alert('카메라 스트림 연결 중 오류가 발생했습니다.');
+        };
+
+        // 웹소켓 연결 저장
+        setWebSocketConnections(prev => ({
+          ...prev,
+          [cameraId]: ws
+        }));
+      } else {
+        // 스트림 중지
+        const ws = webSocketConnections[cameraId];
+        if (ws) {
+          ws.send(JSON.stringify({
+            type: "stop_camera_stream",
+            index: camera.index
+          }));
+          ws.close();
+        }
+        
+        // 비디오 스트림 정리
+        const videoElement = videoRefs.current[cameraId];
+        if (videoElement && videoElement.srcObject) {
+          // @ts-ignore
+          const tracks = videoElement.srcObject.getTracks();
+          tracks.forEach((track: any) => track.stop());
+          videoElement.srcObject = null;
+        }
+      }
+
+      // 상태 업데이트
+      setCameras(prev => prev.map(cam => 
+        cam.id === cameraId
+          ? { ...cam, isStreaming: !cam.isStreaming }
+          : cam
+      ));
+    } catch (error) {
+      console.error('Streaming error:', error);
+      alert('카메라 스트림 처리 중 오류가 발생했습니다.');
     }
-    
-    setCameras(prev => [...prev, newCamera])
-  }
+  };
+  
+  // 카메라 스캔 함수 수정
+  const scanForCameras = async () => {
+    try {
+      const ws = new WebSocket(`ws://localhost:8000/ws`);
+      
+      ws.onopen = () => {
+        ws.send(JSON.stringify({
+          type: "scan_ports"
+        }));
+      };
+
+      ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        
+        if (message.type === "ports_list") {
+          const newCameras = message.ports.map((port: any, index: number) => ({
+            id: `cam${index + 1}`,
+            name: `Camera ${index}`,
+            port: port.port,
+            index: index,
+            resolution: port.description.split('(')[1]?.split(')')[0] || "640x480",
+            fps: parseInt(port.description.split('@')[1]) || 30,
+            isActive: false,
+            isStreaming: false
+          }));
+          
+          setCameras(newCameras);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        alert('카메라 스캔 중 오류가 발생했습니다.');
+      };
+    } catch (error) {
+      console.error('Scan error:', error);
+      alert('카메라 스캔 중 오류가 발생했습니다.');
+    }
+  };
   
   // 카메라 정보 업데이트
   const updateCamera = (cameraId: string, field: string, value: any) => {
@@ -94,6 +192,20 @@ export default function CameraPage() {
     
     alert(`${camera.name} 카메라에서 스크린샷을 촬영했습니다.`)
   }
+  
+  // 웹소켓 연결 상태 관리
+  const [webSocketConnections, setWebSocketConnections] = useState<Record<string, WebSocket>>({});
+
+  // 컴포넌트 언마운트 시 웹소켓 연결 정리
+  useEffect(() => {
+    return () => {
+      Object.values(webSocketConnections).forEach(ws => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.close();
+        }
+      });
+    };
+  }, [webSocketConnections]);
   
   // 화면에 가짜 비디오 스트림 생성 (실제 카메라 연결 대신 사용)
   useEffect(() => {

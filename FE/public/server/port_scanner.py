@@ -2,6 +2,9 @@ import asyncio
 import time
 import logging
 from typing import Dict, List, Any, Set, Optional
+import sys
+import os
+import cv2
 
 import serial
 import serial.tools.list_ports
@@ -16,40 +19,36 @@ class PortScanner:
         self.last_scan_time = 0
     
     def scan_ports(self) -> List[Dict[str, Any]]:
-        """사용 가능한 모든 시리얼 포트를 스캔하여 반환"""
-        try:
-            # 현재 사용 가능한 모든 시리얼 포트 조회
-            available_ports = list(serial.tools.list_ports.comports())
-            
-            # 포트 정보를 사용하기 쉬운 형태로 변환
-            ports_info = []
-            port_names = set()
-            
-            for port in available_ports:
-                port_dict = {
-                    "port": port.device,
-                    "description": port.description or "Unknown Device",
-                    "hardware_id": port.hwid or "Unknown",
-                    "manufacturer": port.manufacturer or "Unknown",
-                    "product": getattr(port, "product", None) or "Unknown",
-                    "serial_number": getattr(port, "serial_number", None) or "Unknown",
-                    "location": getattr(port, "location", None) or "Unknown"
-                }
-                ports_info.append(port_dict)
-                port_names.add(port.device)
-            
-            # 마지막 스캔 결과 업데이트
-            self.last_scan = port_names
-            self.last_scan_time = time.time()
-            
-            logger.info(f"{len(ports_info)}개의 포트를 발견했습니다")
-            return ports_info
+        """사용 가능한 시리얼 포트 스캔"""
+        available_ports = []
         
-        except Exception as e:
-            logger.error(f"포트 스캔 중 오류 발생: {str(e)}")
-            return []
+        # Linux 환경에서 /dev 디렉토리 스캔
+        if sys.platform.startswith('linux'):
+            # video 장치만 스캔
+            for i in range(10):  # 일반적으로 video0~9까지만 확인
+                port = f"/dev/video{i}"
+                if os.path.exists(port):
+                    try:
+                        # OpenCV로 카메라 연결 테스트
+                        cap = cv2.VideoCapture(i)
+                        if cap.isOpened():
+                            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                            fps = cap.get(cv2.CAP_PROP_FPS)
+                            
+                            port_info = {
+                                "port": port,
+                                "description": f"Camera {i} ({width}x{height} @ {fps}fps)",
+                                "type": "camera"
+                            }
+                            available_ports.append(port_info)
+                            cap.release()
+                    except Exception as e:
+                        logger.error(f"포트 {port} 테스트 중 오류: {str(e)}")
+        
+        return available_ports
     
-    async def detect_port_change(self) -> Dict[str, Any]:
+    async def detect_port_change(self):
         """포트 변화를 감지하여 새로 연결된 장치를 식별"""
         previous_ports = self.last_scan
         
@@ -78,7 +77,7 @@ class PortScanner:
         else:
             logger.info("새 포트가 감지되지 않음")
         
-        return result
+        yield result
     
     def check_port_available(self, port: str) -> bool:
         """특정 포트가 사용 가능한지 확인"""
