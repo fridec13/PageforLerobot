@@ -1,0 +1,32 @@
+{
+  "name": "lerobot-server",
+  "version": "0.1.0",
+  "description": "웹소켓 기반 LeRobot 로컬 제어 서버",
+  "main": "main.py",
+  "scripts": {
+    "start": "python main.py",
+    "install": "pip install -r requirements.txt",
+    "build": "python setup.py sdist bdist_wheel"
+  },
+  "author": "RoboSapiens",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/robosapiens/lerobot-server.git"
+  },
+  "keywords": [
+    "robot",
+    "control",
+    "websocket",
+    "lerobot"
+  ],
+  "bugs": {
+    "url": "https://github.com/robosapiens/lerobot-server/issues"
+  },
+  "homepage": "https://github.com/robosapiens/lerobot-server#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+} 
