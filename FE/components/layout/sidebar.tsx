@@ -85,9 +85,9 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps) {
       icon: <Cpu className="h-5 w-5" />,
       submenus: [
         { name: "offsetSIM", path: "/robocon/offsetsim" },
-        { name: "connect", path: "/robocon/connect" },
+        { name: "configs", path: "/robocon/configs" },
         { name: "camera", path: "/robocon/camera" },
-        { name: "model", path: "/robocon/model" },
+        { name: "train", path: "/robocon/train" },
       ],
     },
   ]
