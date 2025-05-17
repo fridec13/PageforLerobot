@@ -52,10 +52,8 @@ export default function CreateWikiPage() {
   // 제목이 변경되면 자동으로 슬러그 생성
   useEffect(() => {
     if (autoSlug && title) {
-      const newSlug = title
-        .toLowerCase()
-        .replace(/[^가-힣a-z0-9\s]/g, "") // 영문, 한글, 숫자, 공백만 허용
-        .replace(/\s+/g, "-")  // 공백을 하이픈으로 변환
+      const newSlug = encodeURIComponent(title)
+        .replace(/%20/g, "-")  // 공백을 하이픈으로 변환
         .replace(/-+/g, "-")   // 연속된 하이픈을 하나로 합침
       
       setSlug(newSlug)
