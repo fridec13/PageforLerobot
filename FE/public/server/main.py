@@ -151,6 +151,22 @@ async def process_message(websocket: WebSocket, message: Dict[str, Any]):
         # 카메라 스트림 시작
         elif msg_type == "start_camera_stream":
             camera_index = message.get("index", 0)
+            logger.info(f"카메라 스트림 시작 요청: 인덱스={camera_index}, 타입={type(camera_index)}")
+            
+            # 인덱스가 문자열인 경우 정수로 변환
+            if isinstance(camera_index, str):
+                try:
+                    camera_index = int(camera_index)
+                    logger.info(f"카메라 인덱스 문자열을 정수로 변환: {camera_index}")
+                except ValueError:
+                    logger.error(f"카메라 인덱스를 정수로 변환할 수 없습니다: {camera_index}")
+                    await manager.send_to(websocket, json.dumps({
+                        "type": "camera_connection_result",
+                        "success": False,
+                        "message": f"잘못된 카메라 인덱스 형식: {camera_index}"
+                    }))
+                    return
+            
             result = camera_manager.start_camera_stream(camera_index)
             
             # 연결 결과 전송
