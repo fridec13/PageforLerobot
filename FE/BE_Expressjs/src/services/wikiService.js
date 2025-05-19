@@ -60,10 +60,10 @@ const wikiService = {
       throw error;
     }
     
-    // 슬러그 형식 검증 (영문, 숫자, 하이픈만 허용)
-    const slugRegex = /^[a-z0-9-]+$/;
+    // 슬러그 형식 검증 (영문, 숫자, 하이픈, URL 인코딩된 한글 허용)
+    const slugRegex = /^[a-z0-9-]+$|^%[0-9A-F]{2}(%[0-9A-F]{2})*$/i;
     if (!slugRegex.test(documentData.slug)) {
-      const error = new Error('슬러그는 영문 소문자, 숫자, 하이픈만 포함할 수 있습니다.');
+      const error = new Error('슬러그는 영문 소문자, 숫자, 하이픈 또는 URL 인코딩된 한글만 포함할 수 있습니다.');
       error.statusCode = 400;
       throw error;
     }

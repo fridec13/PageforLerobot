@@ -26,7 +26,6 @@ export default function CreateWikiPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [autoSlug, setAutoSlug] = useState(true)
   
   useEffect(() => {
     // 인증되지 않은 사용자는 로그인 페이지로 리디렉션
@@ -51,14 +50,14 @@ export default function CreateWikiPage() {
   
   // 제목이 변경되면 자동으로 슬러그 생성
   useEffect(() => {
-    if (autoSlug && title) {
+    if (title) {
       const newSlug = encodeURIComponent(title)
         .replace(/%20/g, "-")  // 공백을 하이픈으로 변환
         .replace(/-+/g, "-")   // 연속된 하이픈을 하나로 합침
       
       setSlug(newSlug)
     }
-  }, [title, autoSlug])
+  }, [title])
   
   const handleCategoryToggle = (categoryId: string) => {
     setSelectedCategories(prev => 
@@ -75,11 +74,6 @@ export default function CreateWikiPage() {
     // 유효성 검사
     if (!title.trim()) {
       setError("제목을 입력해주세요.")
-      return
-    }
-    
-    if (!slug.trim()) {
-      setError("URL 식별자를 입력해주세요.")
       return
     }
     
@@ -142,36 +136,6 @@ export default function CreateWikiPage() {
                 placeholder="문서 제목을 입력하세요"
                 required
               />
-            </div>
-            
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="slug">URL 식별자</Label>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="auto-slug"
-                    checked={autoSlug}
-                    onCheckedChange={(checked) => setAutoSlug(checked as boolean)}
-                  />
-                  <label
-                    htmlFor="auto-slug"
-                    className="text-sm text-muted-foreground cursor-pointer"
-                  >
-                    자동 생성
-                  </label>
-                </div>
-              </div>
-              <Input
-                id="slug"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value)}
-                placeholder="url-friendly-identifier"
-                disabled={autoSlug}
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                문서에 접근할 URL의 일부로 사용됩니다. 예: /wiki/<span className="font-mono">{slug || 'example-slug'}</span>
-              </p>
             </div>
             
             <div className="space-y-2">
