@@ -19,8 +19,8 @@ const userRoutes = require('./src/routes/userRoutes');
 const wikiRoutes = require('./src/routes/wikiRoutes');
 const docsRoutes = require('./src/routes/docsRoutes');
 // 방명록 및 리더보드 라우트 추가
-const guestbookRoutes = require('./src/routes/guestbook.routes');
-const leaderboardRoutes = require('./src/routes/leaderboard.routes');
+const guestbookRoutes = require('./src/routes/guestbookRoutes');
+const leaderboardRoutes = require('./src/routes/leaderboardRoutes');
 // 커뮤니티 라우터 추가
 const communityRoutes = require('./src/routes/communityRoutes');
 // 포럼 라우터 추가

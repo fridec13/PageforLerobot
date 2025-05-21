@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const GuestbookController = require('../controllers/guestbook.controller');
+const GuestbookController = require('../controllers/guestbookController');
 const { authMiddleware, optionalAuth } = require('../middlewares/authMiddleware');
 
 /**

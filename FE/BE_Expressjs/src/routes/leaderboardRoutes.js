@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const LeaderboardController = require('../controllers/leaderboard.controller');
+const LeaderboardController = require('../controllers/leaderboardController');
 const { optionalAuth } = require('../middlewares/authMiddleware');
 
 /**
