@@ -32,7 +32,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
 
         // 댓글 불러오기
         const commentsData = await communityService.getComments(params.id);
-        setComments(commentsData.comments || []);
+        setComments(commentsData?.comments || []);
       } catch (error) {
         console.error("게시글 로딩 오류:", error);
         // 404 페이지로 리다이렉트하거나 에러 처리
@@ -69,7 +69,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commentText.trim() || !post) return;
+    if (!commentText.trim() || !post || !post.id) return;
 
     setCommentLoading(true);
     try {
@@ -77,7 +77,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
       
       // 댓글 목록 다시 불러오기
       const commentsData = await communityService.getComments(params.id);
-      setComments(commentsData.comments || []);
+      setComments(commentsData?.comments || []);
       
       setCommentText("");
     } catch (error) {
@@ -138,10 +138,10 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
             <div className="flex items-center">
               <div className="h-8 w-8 bg-gray-200 rounded-full mr-2 overflow-hidden">
                 <div className="h-full w-full bg-blue-300 flex items-center justify-center text-white">
-                  {post.author.username[0]}
+                  {post.author?.username?.[0] || '?'}
                 </div>
               </div>
-              <span>{post.author.username}</span>
+              <span>{post.author?.username || '알 수 없음'}</span>
               <span className="mx-2">•</span>
               <span>{formatDate(post.createdAt)}</span>
             </div>
@@ -214,10 +214,10 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                   <div className="flex items-center">
                     <div className="h-8 w-8 bg-gray-200 rounded-full mr-2 overflow-hidden">
                       <div className="h-full w-full bg-green-300 flex items-center justify-center text-white">
-                        {comment.author.username[0]}
+                        {comment.author?.username?.[0] || '?'}
                       </div>
                     </div>
-                    <span className="font-semibold">{comment.author.username}</span>
+                    <span className="font-semibold">{comment.author?.username || '알 수 없음'}</span>
                     <span className="mx-2 text-gray-500">•</span>
                     <span className="text-gray-500 text-sm">{formatDate(comment.createdAt)}</span>
                   </div>

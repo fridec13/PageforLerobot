@@ -162,11 +162,18 @@ export function parseWikiText(wikiText: string, previewMode: boolean = false): s
   
   // 목차 생성을 위한 제목들 추출
   const headings: { level: number; title: string; id: string }[] = [];
+  
+  // 나무위키 스타일 제목 패턴
   const headingPattern1 = /^==\s*(.*?)\s*==$/gm;
   const headingPattern2 = /^===\s*(.*?)\s*===$/gm;
   const headingPattern3 = /^====\s*(.*?)\s*====$/gm;
+  
+  // 마크다운 스타일 제목 패턴
+  const mdHeadingPattern1 = /^##\s+(.*?)$/gm;
+  const mdHeadingPattern2 = /^###\s+(.*?)$/gm;
+  const mdHeadingPattern3 = /^####\s+(.*?)$/gm;
 
-  // 제목(h2) 추출
+  // 제목(h2) 추출 - 나무위키 스타일
   let match;
   while ((match = headingPattern1.exec(wikiText)) !== null) {
     const title = match[1].trim();
@@ -174,15 +181,36 @@ export function parseWikiText(wikiText: string, previewMode: boolean = false): s
     headings.push({ level: 2, title, id });
   }
 
-  // 소제목(h3) 추출
+  // 제목(h2) 추출 - 마크다운 스타일
+  while ((match = mdHeadingPattern1.exec(wikiText)) !== null) {
+    const title = match[1].trim();
+    const id = title.toLowerCase().replace(/\s+/g, '-');
+    headings.push({ level: 2, title, id });
+  }
+
+  // 소제목(h3) 추출 - 나무위키 스타일
   while ((match = headingPattern2.exec(wikiText)) !== null) {
     const title = match[1].trim();
     const id = title.toLowerCase().replace(/\s+/g, '-');
     headings.push({ level: 3, title, id });
   }
   
-  // 소소제목(h4) 추출
+  // 소제목(h3) 추출 - 마크다운 스타일
+  while ((match = mdHeadingPattern2.exec(wikiText)) !== null) {
+    const title = match[1].trim();
+    const id = title.toLowerCase().replace(/\s+/g, '-');
+    headings.push({ level: 3, title, id });
+  }
+  
+  // 소소제목(h4) 추출 - 나무위키 스타일
   while ((match = headingPattern3.exec(wikiText)) !== null) {
+    const title = match[1].trim();
+    const id = title.toLowerCase().replace(/\s+/g, '-');
+    headings.push({ level: 4, title, id });
+  }
+  
+  // 소소제목(h4) 추출 - 마크다운 스타일
+  while ((match = mdHeadingPattern3.exec(wikiText)) !== null) {
     const title = match[1].trim();
     const id = title.toLowerCase().replace(/\s+/g, '-');
     headings.push({ level: 4, title, id });
@@ -237,6 +265,21 @@ export function parseWikiText(wikiText: string, previewMode: boolean = false): s
       }
       const displayText = text || link;
       return `<a href="/wiki/${link.replace(/ /g, '_')}" class="text-blue-600 hover:underline">${displayText}</a>`;
+    })
+    // 마크다운 제목: ## 제목
+    .replace(/^##\s+(.*?)$/gm, (match, title) => {
+      const id = title.toLowerCase().replace(/\s+/g, '-');
+      return `<h2 class="text-2xl font-bold mt-6 mb-4 pb-2 border-b" id="${id}">${title}</h2>`;
+    })
+    // 마크다운 소제목: ### 소제목
+    .replace(/^###\s+(.*?)$/gm, (match, title) => {
+      const id = title.toLowerCase().replace(/\s+/g, '-');
+      return `<h3 class="text-xl font-bold mt-5 mb-3" id="${id}">${title}</h3>`;
+    })
+    // 마크다운 소소제목: #### 소소제목
+    .replace(/^####\s+(.*?)$/gm, (match, title) => {
+      const id = title.toLowerCase().replace(/\s+/g, '-');
+      return `<h4 class="text-lg font-semibold mt-4 mb-2" id="${id}">${title}</h4>`;
     })
     // 제목: == 제목 ==
     .replace(/^==\s*(.*?)\s*==$/gm, (match, title) => {

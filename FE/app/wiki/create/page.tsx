@@ -144,12 +144,12 @@ export default function CreateWikiPage() {
                 id="content"
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="마크다운 형식으로 문서 내용을 작성하세요..."
+                placeholder="위키문법 형식으로 문서 내용을 작성하세요..."
                 className="min-h-[300px] font-mono"
                 required
               />
               <p className="text-xs text-muted-foreground">
-                마크다운 문법을 지원합니다. 제목, 링크, 이미지, 코드 블록 등을 사용할 수 있습니다.
+                위키 문법을 지원합니다. 제목, 링크, 이미지, 코드 블록 등을 사용할 수 있습니다.
               </p>
             </div>
             
