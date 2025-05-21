@@ -341,7 +341,7 @@ model Post {
   title         String    @db.VarChar(255)
   content       String    @db.Text
   category      String    @db.VarChar(50)
-  authorId      Int
+  authorId      String
   author        User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -360,7 +360,7 @@ model Post {
 model Comment {
   id            Int       @id @default(autoincrement())
   content       String    @db.Text
-  authorId      Int
+  authorId      String
   author        User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   postId        Int
   post          Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
@@ -377,7 +377,7 @@ model Comment {
 
 model PostLike {
   id            Int       @id @default(autoincrement())
-  userId        Int
+  userId        String
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   postId        Int
   post          Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
@@ -390,7 +390,7 @@ model PostLike {
 
 model CommentLike {
   id            Int       @id @default(autoincrement())
-  userId        Int
+  userId        String
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   commentId     Int
   comment       Comment   @relation(fields: [commentId], references: [id], onDelete: Cascade)
