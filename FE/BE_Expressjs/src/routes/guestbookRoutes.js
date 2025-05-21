@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const GuestbookController = require('../controllers/guestbookController');
-const { authMiddleware, optionalAuth } = require('../middlewares/authMiddleware');
+const authMiddleware = require('../middlewares/authMiddleware');
+const optionalAuth = require('../middlewares/optionalAuthmiddleware');
 
 /**
  * 방명록 라우트 설정

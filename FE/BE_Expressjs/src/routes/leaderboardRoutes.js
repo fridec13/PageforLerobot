@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const LeaderboardController = require('../controllers/leaderboardController');
-const { optionalAuth } = require('../middlewares/authMiddleware');
+const optionalAuth = require('../middlewares/optionalAuthmiddleware');
 
 /**
  * 리더보드 라우트 설정
