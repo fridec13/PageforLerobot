@@ -41,6 +41,33 @@ const docsService = {
   },
 
   /**
+   * 인기 문서 조회
+   * @param {number} limit - 조회할 문서 수
+   * @returns {Promise<Array>}
+   */
+  getPopularDocuments: async (limit) => {
+    return await docsModel.getPopularDocuments(limit);
+  },
+
+  /**
+   * 최신 문서 조회
+   * @param {number} limit - 조회할 문서 수
+   * @returns {Promise<Array>}
+   */
+  getRecentDocuments: async (limit) => {
+    return await docsModel.getRecentDocuments(limit);
+  },
+
+  /**
+   * 문서 검색
+   * @param {string} query - 검색어
+   * @returns {Promise<Array>}
+   */
+  searchDocuments: async (query) => {
+    return await docsModel.searchDocuments(query);
+  },
+
+  /**
    * 문서 생성
    * @param {Object} documentData - 문서 데이터
    * @param {string} userId - 사용자 ID
@@ -98,14 +125,35 @@ const docsService = {
   },
 
   /**
-   * 문서 변경 요청 생성
-   * @param {string} documentId - 문서 ID
-   * @param {string} proposedContent - 변경 내용
+   * 문서 삭제
+   * @param {string} id - 문서 ID
+   * @returns {Promise<boolean>}
+   */
+  deleteDocument: async (id) => {
+    return await docsModel.deleteDocument(id);
+  },
+
+  /**
+   * 문서 발행 상태 변경
+   * @param {string} id - 문서 ID
+   * @param {boolean} isPublished - 발행 상태
    * @param {string} userId - 사용자 ID
    * @returns {Promise<Object>}
    */
-  createChangeRequest: async (documentId, proposedContent, userId) => {
-    return await docsModel.createChangeRequest(documentId, proposedContent, userId);
+  togglePublishStatus: async (id, isPublished, userId) => {
+    return await docsModel.togglePublishStatus(id, isPublished, userId);
+  },
+
+  /**
+   * 문서 변경 요청 생성
+   * @param {string} documentId - 문서 ID
+   * @param {string} proposedContent - 변경 내용
+   * @param {string} reason - 변경 이유
+   * @param {string} userId - 사용자 ID
+   * @returns {Promise<Object>}
+   */
+  createChangeRequest: async (documentId, proposedContent, reason, userId) => {
+    return await docsModel.createChangeRequest(documentId, proposedContent, reason, userId);
   },
 
   /**
@@ -127,6 +175,15 @@ const docsService = {
    */
   getDocumentHistory: async (documentId) => {
     return await docsModel.getDocumentHistory(documentId);
+  },
+
+  /**
+   * 문서별 변경 요청 목록 조회
+   * @param {string} documentId - 문서 ID
+   * @returns {Promise<Array>}
+   */
+  getChangeRequestsByDocument: async (documentId) => {
+    return await docsModel.getChangeRequestsByDocument(documentId);
   },
 
   /**
@@ -153,6 +210,34 @@ const docsService = {
    */
   getAllCategories: async () => {
     return await docsModel.getAllCategories();
+  },
+
+  /**
+   * 카테고리 생성
+   * @param {Object} categoryData - 카테고리 데이터
+   * @returns {Promise<Object>}
+   */
+  createCategory: async (categoryData) => {
+    return await docsModel.createCategory(categoryData);
+  },
+
+  /**
+   * 카테고리 수정
+   * @param {string} id - 카테고리 ID
+   * @param {Object} categoryData - 카테고리 데이터
+   * @returns {Promise<Object>}
+   */
+  updateCategory: async (id, categoryData) => {
+    return await docsModel.updateCategory(id, categoryData);
+  },
+
+  /**
+   * 카테고리 삭제
+   * @param {string} id - 카테고리 ID
+   * @returns {Promise<boolean>}
+   */
+  deleteCategory: async (id) => {
+    return await docsModel.deleteCategory(id);
   }
 };
 

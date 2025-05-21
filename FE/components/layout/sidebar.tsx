@@ -9,6 +9,8 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { useState, useEffect } from "react"
+import { useSidebar } from "@/lib/contexts/SidebarContext"
+import DocsSidebarContent from "@/components/docs/DocsSidebarContent"
 
 interface Submenu {
   name: string
@@ -30,6 +32,7 @@ interface SidebarProps {
 export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps) {
   const pathname = usePathname() || ""
   const [openItems, setOpenItems] = useState<{[key: string]: boolean}>({})
+  const { mode } = useSidebar(); // 사이드바 모드 가져오기
 
   // 경로 변경 시 모바일 사이드바 닫기
   useEffect(() => {
@@ -60,7 +63,6 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps) {
         { name: "onshape", path: "/docs/onshape" },
         { name: "ROS2", path: "/docs/ros2" },
         { name: "lerobot", path: "/docs/lerobot" },
-        { name: "commit", path: "/docs/commit" },
       ],
     },
     {
@@ -124,6 +126,89 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps) {
     });
   }
 
+  // 사이드바 콘텐츠 렌더링
+  const renderSidebarContent = () => {
+    // DOCS 모드일 때 문서 사이드바 콘텐츠 렌더링
+    if (mode === 'docs') {
+      return <DocsSidebarContent />;
+    }
+
+    // 기본 사이드바 콘텐츠 렌더링
+    return (
+      <div className="p-4 flex flex-col h-full justify-between">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            {menus.map((menu) => (
+              <div key={menu.name} className="border-0">
+                <div className="flex items-center">
+                  {/* 메인 메뉴 링크 */}
+                  <Link
+                    href={menu.path}
+                    className={cn(
+                      "flex-grow flex items-center p-2 rounded-md transition-colors",
+                      isActive(menu.path) 
+                        ? "bg-blue-500 text-white font-medium" 
+                        : "hover:bg-blue-100 text-gray-700"
+                    )}
+                  >
+                    <span className="w-6 flex justify-center">{menu.icon}</span>
+                    <span className="ml-2">{menu.name}</span>
+                  </Link>
+                </div>
+                
+                {/* 하위 메뉴 표시 */}
+                {menu.submenus && openItems[menu.name] && (
+                  <div className="pl-8 space-y-0.5 pt-1 pb-1 sidebar-accordion-content">
+                    {menu.submenus.map((submenu, index) => (
+                      <Link
+                        key={submenu.name}
+                        href={submenu.path}
+                        className={cn(
+                          "block px-2 py-1.5 rounded-md text-sm transition-colors sidebar-submenu-item",
+                          pathname === submenu.path 
+                            ? "bg-blue-100 text-blue-600 font-medium" 
+                            : "text-gray-700 hover:bg-blue-50"
+                        )}
+                        style={{ 
+                          animationDelay: `${index * 50}ms`
+                        }}
+                      >
+                        {submenu.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          
+          <Separator className="my-4" />
+          
+          <div className="rounded-md bg-sidebar-accent/40 p-3 text-sm">
+            <p className="text-sidebar-foreground/80 mb-2">기여해주세요</p>
+            <p className="text-xs text-sidebar-foreground/70 mb-3">
+              로봇 지식 공유에 참여하고 특별한 칭호를 획득하세요.
+            </p>
+            <Button variant="outline" size="sm" className="w-full justify-start text-blue-500" asChild>
+              <Link href="/wiki/create">
+                <BookOpen className="h-3.5 w-3.5 mr-1" />
+                위키에 기여하기
+              </Link>
+            </Button>
+          </div>
+        </div>
+        
+        <div className="mt-auto pt-4">
+          <Separator className="mb-4" />
+          <div className="text-xs text-sidebar-foreground/60 text-center">
+            <p><Link href="/credits" className="hover:text-blue-500 transition-colors">&copy; {new Date().getFullYear()} HomoSSAFYens</Link></p>
+            <p className="mt-1">모든 권리 보유</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       {/* 모바일 오버레이 백드롭 */}
@@ -149,93 +234,7 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps) {
         </div>
         
         <ScrollArea className="h-[calc(100%-56px)] lg:h-full">
-          <div className="p-4 flex flex-col h-full justify-between">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                {menus.map((menu) => (
-                  <div key={menu.name} className="border-0">
-                    <div className="flex items-center">
-                      {/* 메인 메뉴 링크 */}
-                      <Link
-                        href={menu.path}
-                        className={cn(
-                          "flex-grow flex items-center p-2 rounded-md transition-colors",
-                          isActive(menu.path) 
-                            ? "bg-blue-500 text-white font-medium" 
-                            : "hover:bg-blue-100 text-gray-700"
-                        )}
-                      >
-                        <span className="w-6 flex justify-center">{menu.icon}</span>
-                        <span className="ml-2">{menu.name}</span>
-                      </Link>
-                      
-                      {/* 하위 메뉴가 있는 경우 토글 버튼 추가
-                      {menu.submenus && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="w-8 h-8 ml-1"
-                          onClick={(e) => toggleSubmenu(menu.name, e)}
-                        >
-                          {openItems[menu.name] ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
-                          )}
-                        </Button>
-                      )} */}
-                    </div>
-                    
-                    {/* 하위 메뉴 표시 */}
-                    {menu.submenus && openItems[menu.name] && (
-                      <div className="pl-8 space-y-0.5 pt-1 pb-1 sidebar-accordion-content">
-                        {menu.submenus.map((submenu, index) => (
-                          <Link
-                            key={submenu.name}
-                            href={submenu.path}
-                            className={cn(
-                              "block px-2 py-1.5 rounded-md text-sm transition-colors sidebar-submenu-item",
-                              pathname === submenu.path 
-                                ? "bg-blue-100 text-blue-600 font-medium" 
-                                : "text-gray-700 hover:bg-blue-50"
-                            )}
-                            style={{ 
-                              animationDelay: `${index * 50}ms`
-                            }}
-                          >
-                            {submenu.name}
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-              
-              <Separator className="my-4" />
-              
-              <div className="rounded-md bg-sidebar-accent/40 p-3 text-sm">
-                <p className="text-sidebar-foreground/80 mb-2">기여해주세요</p>
-                <p className="text-xs text-sidebar-foreground/70 mb-3">
-                  로봇 지식 공유에 참여하고 특별한 칭호를 획득하세요.
-                </p>
-                <Button variant="outline" size="sm" className="w-full justify-start text-blue-500" asChild>
-                  <Link href="/wiki/create">
-                    <BookOpen className="h-3.5 w-3.5 mr-1" />
-                    위키에 기여하기
-                  </Link>
-                </Button>
-              </div>
-            </div>
-            
-            <div className="mt-auto pt-4">
-              <Separator className="mb-4" />
-              <div className="text-xs text-sidebar-foreground/60 text-center">
-                <p><Link href="/credits" className="hover:text-blue-500 transition-colors">&copy; {new Date().getFullYear()} HomoSSAFYens</Link></p>
-                <p className="mt-1">모든 권리 보유</p>
-              </div>
-            </div>
-          </div>
+          {renderSidebarContent()}
         </ScrollArea>
       </aside>
     </>

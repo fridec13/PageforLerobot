@@ -18,6 +18,13 @@ const authRoutes = require('./src/routes/authRoutes');
 const userRoutes = require('./src/routes/userRoutes');
 const wikiRoutes = require('./src/routes/wikiRoutes');
 const docsRoutes = require('./src/routes/docsRoutes');
+// 방명록 및 리더보드 라우트 추가
+const guestbookRoutes = require('./src/routes/guestbook.routes');
+const leaderboardRoutes = require('./src/routes/leaderboard.routes');
+// 커뮤니티 라우터 추가
+const communityRoutes = require('./src/routes/communityRoutes');
+// 포럼 라우터 추가
+const forumRoutes = require('./src/routes/forumRoutes');
 
 const app = express();
 
@@ -44,6 +51,13 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/wiki', wikiRoutes);
 app.use('/api/docs', docsRoutes);
+// 방명록 및 리더보드 라우트 등록
+app.use('/api/guestbook', guestbookRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
+// 커뮤니티 라우터 등록
+app.use('/api/community', communityRoutes);
+// 포럼 라우터 등록
+app.use('/api/forum', forumRoutes);
 
 // 건강 체크 엔드포인트
 app.get('/api/health', (req, res) => {

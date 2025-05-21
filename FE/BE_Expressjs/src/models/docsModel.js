@@ -379,10 +379,11 @@ const docsModel = {
    * 문서 변경 요청 생성
    * @param {string} documentId - 문서 ID
    * @param {string} proposedContent - 변경 내용
+   * @param {string} reason - 변경 이유
    * @param {string} userId - 사용자 ID
    * @returns {Promise<Object>}
    */
-  createChangeRequest: async (documentId, proposedContent, userId) => {
+  createChangeRequest: async (documentId, proposedContent, reason, userId) => {
     try {
       // 문서 존재 확인
       const document = await prisma.document.findUnique({
@@ -397,6 +398,7 @@ const docsModel = {
       const changeRequest = await prisma.documentChangeRequest.create({
         data: {
           proposedContent,
+          reason,
           status: 'pending',
           document: { connect: { id: documentId } },
           proposedByUser: { connect: { id: userId } }
@@ -684,6 +686,371 @@ const docsModel = {
       });
     } catch (error) {
       console.error('Error in getAllCategories:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * 문서 삭제
+   * @param {string} id - 문서 ID
+   * @returns {Promise<boolean>}
+   */
+  deleteDocument: async (id) => {
+    try {
+      // 문서 존재 확인
+      const document = await prisma.document.findUnique({
+        where: { id }
+      });
+
+      if (!document) {
+        return false;
+      }
+
+      // 관련 이력 및 변경 요청은 cascade로 자동 삭제됨
+      await prisma.document.delete({
+        where: { id }
+      });
+
+      return true;
+    } catch (error) {
+      console.error(`Error in deleteDocument for ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * 문서 발행 상태 변경
+   * @param {string} id - 문서 ID
+   * @param {boolean} isPublished - 발행 상태
+   * @param {string} userId - 사용자 ID
+   * @returns {Promise<Object>}
+   */
+  togglePublishStatus: async (id, isPublished, userId) => {
+    try {
+      // 문서 존재 확인
+      const document = await prisma.document.findUnique({
+        where: { id }
+      });
+
+      if (!document) {
+        return null;
+      }
+
+      // 문서 상태 업데이트
+      return await prisma.document.update({
+        where: { id },
+        data: {
+          isPublished,
+          lastEditedByUser: { connect: { id: userId } }
+        },
+        include: {
+          category: true,
+          createdByUser: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true
+            }
+          },
+          lastEditedByUser: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true
+            }
+          }
+        }
+      });
+    } catch (error) {
+      console.error(`Error in togglePublishStatus for ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * 인기 문서 목록 조회
+   * @param {number} limit - 조회할 문서 수
+   * @returns {Promise<Array>}
+   */
+  getPopularDocuments: async (limit = 10) => {
+    try {
+      return await prisma.document.findMany({
+        where: { isPublished: true },
+        orderBy: { views: 'desc' },
+        take: Number(limit),
+        include: {
+          category: true,
+          createdByUser: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true
+            }
+          },
+          lastEditedByUser: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true
+            }
+          }
+        }
+      });
+    } catch (error) {
+      console.error(`Error in getPopularDocuments:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * 최신 문서 목록 조회
+   * @param {number} limit - 조회할 문서 수
+   * @returns {Promise<Array>}
+   */
+  getRecentDocuments: async (limit = 10) => {
+    try {
+      return await prisma.document.findMany({
+        where: { isPublished: true },
+        orderBy: { updatedAt: 'desc' },
+        take: Number(limit),
+        include: {
+          category: true,
+          createdByUser: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true
+            }
+          },
+          lastEditedByUser: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true
+            }
+          }
+        }
+      });
+    } catch (error) {
+      console.error(`Error in getRecentDocuments:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * 문서 검색
+   * @param {string} query - 검색어
+   * @returns {Promise<Array>}
+   */
+  searchDocuments: async (query) => {
+    try {
+      return await prisma.document.findMany({
+        where: {
+          isPublished: true,
+          OR: [
+            { title: { contains: query, mode: 'insensitive' } },
+            { content: { contains: query, mode: 'insensitive' } }
+          ]
+        },
+        orderBy: { updatedAt: 'desc' },
+        include: {
+          category: true,
+          createdByUser: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true
+            }
+          },
+          lastEditedByUser: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true
+            }
+          }
+        }
+      });
+    } catch (error) {
+      console.error(`Error in searchDocuments for query "${query}":`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * 문서별 변경 요청 목록 조회
+   * @param {string} documentId - 문서 ID
+   * @returns {Promise<Array>}
+   */
+  getChangeRequestsByDocument: async (documentId) => {
+    try {
+      return await prisma.documentChangeRequest.findMany({
+        where: { documentId },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          proposedByUser: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true
+            }
+          },
+          reviewedByUser: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true
+            }
+          }
+        }
+      });
+    } catch (error) {
+      console.error(`Error in getChangeRequestsByDocument for ${documentId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * 카테고리 생성
+   * @param {Object} categoryData - 카테고리 데이터 
+   * @returns {Promise<Object>}
+   */
+  createCategory: async (categoryData) => {
+    try {
+      // 경로 중복 확인
+      const existingCategory = await prisma.category.findUnique({
+        where: { path: categoryData.path }
+      });
+
+      if (existingCategory) {
+        throw new Error('이미 존재하는 카테고리 경로입니다.');
+      }
+
+      // 상위 카테고리 처리
+      const data = { ...categoryData };
+      
+      // parentId가 있으면 연결
+      if (data.parentId) {
+        data.parent = { connect: { id: data.parentId } };
+        delete data.parentId;
+      }
+
+      return await prisma.category.create({
+        data,
+        include: {
+          parent: {
+            select: {
+              id: true,
+              name: true,
+              path: true
+            }
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error in createCategory:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * 카테고리 수정
+   * @param {string} id - 카테고리 ID
+   * @param {Object} categoryData - 수정할 카테고리 데이터
+   * @returns {Promise<Object>}
+   */
+  updateCategory: async (id, categoryData) => {
+    try {
+      // 카테고리 존재 확인
+      const category = await prisma.category.findUnique({
+        where: { id }
+      });
+
+      if (!category) {
+        return null;
+      }
+
+      // 경로 변경 시 중복 확인
+      if (categoryData.path && categoryData.path !== category.path) {
+        const existingCategory = await prisma.category.findUnique({
+          where: { path: categoryData.path }
+        });
+
+        if (existingCategory && existingCategory.id !== id) {
+          throw new Error('이미 존재하는 카테고리 경로입니다.');
+        }
+      }
+
+      // 상위 카테고리 처리
+      const data = { ...categoryData };
+      
+      // parentId가 있으면 연결
+      if (data.parentId) {
+        data.parent = { connect: { id: data.parentId } };
+        delete data.parentId;
+      }
+
+      return await prisma.category.update({
+        where: { id },
+        data,
+        include: {
+          parent: {
+            select: {
+              id: true,
+              name: true,
+              path: true
+            }
+          }
+        }
+      });
+    } catch (error) {
+      console.error(`Error in updateCategory for ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * 카테고리 삭제
+   * @param {string} id - 카테고리 ID
+   * @returns {Promise<boolean>}
+   */
+  deleteCategory: async (id) => {
+    try {
+      // 카테고리 존재 확인
+      const category = await prisma.category.findUnique({
+        where: { id },
+        include: {
+          documents: true,
+          children: true
+        }
+      });
+
+      if (!category) {
+        return false;
+      }
+
+      // 문서가 있거나 하위 카테고리가 있으면 삭제 불가
+      if (category.documents.length > 0 || category.children.length > 0) {
+        throw new Error('문서나 하위 카테고리가 있는 카테고리는 삭제할 수 없습니다.');
+      }
+
+      await prisma.category.delete({
+        where: { id }
+      });
+
+      return true;
+    } catch (error) {
+      console.error(`Error in deleteCategory for ${id}:`, error);
       throw error;
     }
   }

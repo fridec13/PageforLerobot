@@ -99,6 +99,68 @@ const docsController = {
   },
   
   /**
+   * 인기 문서 조회
+   * GET /api/docs/popular
+   */
+  getPopularDocuments: async (req, res, next) => {
+    try {
+      const limit = parseInt(req.query.limit) || 10;
+      const documents = await docsService.getPopularDocuments(limit);
+      
+      res.json({
+        success: true,
+        data: documents
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+  
+  /**
+   * 최신 문서 조회
+   * GET /api/docs/recent
+   */
+  getRecentDocuments: async (req, res, next) => {
+    try {
+      const limit = parseInt(req.query.limit) || 10;
+      const documents = await docsService.getRecentDocuments(limit);
+      
+      res.json({
+        success: true,
+        data: documents
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+  
+  /**
+   * 문서 검색
+   * GET /api/docs/search
+   */
+  searchDocuments: async (req, res, next) => {
+    try {
+      const { query } = req.query;
+      
+      if (!query) {
+        return res.json({
+          success: true,
+          data: []
+        });
+      }
+      
+      const documents = await docsService.searchDocuments(query);
+      
+      res.json({
+        success: true,
+        data: documents
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+  
+  /**
    * 문서 생성
    * POST /api/docs
    */
@@ -153,6 +215,81 @@ const docsController = {
   },
   
   /**
+   * 문서 삭제
+   * DELETE /api/docs/:id
+   */
+  deleteDocument: async (req, res, next) => {
+    try {
+      // 인증 확인 (관리자 또는 모더레이터만 삭제 가능)
+      if (!req.user || !['ADMIN', 'MODERATOR'].includes(req.user.role)) {
+        return res.status(403).json({
+          success: false,
+          error: '문서 삭제 권한이 없습니다.'
+        });
+      }
+      
+      const { id } = req.params;
+      const result = await docsService.deleteDocument(id);
+      
+      if (!result) {
+        return res.status(404).json({
+          success: false,
+          error: '문서를 찾을 수 없습니다.'
+        });
+      }
+      
+      res.json({
+        success: true,
+        message: '문서가 삭제되었습니다.'
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+  
+  /**
+   * 문서 발행 상태 변경
+   * PUT /api/docs/:id/publish
+   */
+  togglePublishStatus: async (req, res, next) => {
+    try {
+      // 인증 확인 (관리자 또는 모더레이터만 발행 상태 변경 가능)
+      if (!req.user || !['ADMIN', 'MODERATOR'].includes(req.user.role)) {
+        return res.status(403).json({
+          success: false,
+          error: '문서 발행 상태 변경 권한이 없습니다.'
+        });
+      }
+      
+      const { id } = req.params;
+      const { isPublished } = req.body;
+      
+      if (isPublished === undefined) {
+        return res.status(400).json({
+          success: false,
+          error: 'isPublished 필드가 필요합니다.'
+        });
+      }
+      
+      const document = await docsService.togglePublishStatus(id, isPublished, req.user.id);
+      
+      if (!document) {
+        return res.status(404).json({
+          success: false,
+          error: '문서를 찾을 수 없습니다.'
+        });
+      }
+      
+      res.json({
+        success: true,
+        data: document
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+  
+  /**
    * 문서 변경 요청 생성
    * POST /api/docs/:id/change-requests
    */
@@ -167,17 +304,43 @@ const docsController = {
       }
       
       const { id } = req.params;
-      const { proposedContent } = req.body;
+      const { proposedContent, reason } = req.body;
+      
+      if (!proposedContent) {
+        return res.status(400).json({
+          success: false,
+          error: '제안 내용이 필요합니다.'
+        });
+      }
       
       const changeRequest = await docsService.createChangeRequest(
         id, 
-        proposedContent, 
+        proposedContent,
+        reason || '',
         req.user.id
       );
       
       res.status(201).json({
         success: true,
         data: changeRequest
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+  
+  /**
+   * 문서별 변경 요청 목록 조회
+   * GET /api/docs/:id/change-requests
+   */
+  getChangeRequestsByDocument: async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const requests = await docsService.getChangeRequestsByDocument(id);
+      
+      res.json({
+        success: true,
+        data: requests
       });
     } catch (error) {
       next(error);
@@ -315,6 +478,100 @@ const docsController = {
       res.json({
         success: true,
         data: categories
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+  
+  /**
+   * 카테고리 생성
+   * POST /api/docs/categories
+   */
+  createCategory: async (req, res, next) => {
+    try {
+      // 관리자 또는 모더레이터만 카테고리 생성 가능
+      if (!req.user || !['ADMIN', 'MODERATOR'].includes(req.user.role)) {
+        return res.status(403).json({
+          success: false,
+          error: '카테고리 생성 권한이 없습니다.'
+        });
+      }
+      
+      const categoryData = req.body;
+      const newCategory = await docsService.createCategory(categoryData);
+      
+      res.status(201).json({
+        success: true,
+        data: newCategory
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+  
+  /**
+   * 카테고리 수정
+   * PUT /api/docs/categories/:id
+   */
+  updateCategory: async (req, res, next) => {
+    try {
+      // 관리자 또는 모더레이터만 카테고리 수정 가능
+      if (!req.user || !['ADMIN', 'MODERATOR'].includes(req.user.role)) {
+        return res.status(403).json({
+          success: false,
+          error: '카테고리 수정 권한이 없습니다.'
+        });
+      }
+      
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const updatedCategory = await docsService.updateCategory(id, updates);
+      
+      if (!updatedCategory) {
+        return res.status(404).json({
+          success: false,
+          error: '카테고리를 찾을 수 없습니다.'
+        });
+      }
+      
+      res.json({
+        success: true,
+        data: updatedCategory
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+  
+  /**
+   * 카테고리 삭제
+   * DELETE /api/docs/categories/:id
+   */
+  deleteCategory: async (req, res, next) => {
+    try {
+      // 관리자만 카테고리 삭제 가능
+      if (!req.user || req.user.role !== 'ADMIN') {
+        return res.status(403).json({
+          success: false,
+          error: '카테고리 삭제 권한이 없습니다.'
+        });
+      }
+      
+      const { id } = req.params;
+      const result = await docsService.deleteCategory(id);
+      
+      if (!result) {
+        return res.status(404).json({
+          success: false,
+          error: '카테고리를 찾을 수 없습니다.'
+        });
+      }
+      
+      res.json({
+        success: true,
+        message: '카테고리가 삭제되었습니다.'
       });
     } catch (error) {
       next(error);

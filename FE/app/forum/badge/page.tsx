@@ -1,126 +1,128 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Award, Crown, Star, BookOpen, MessageSquare, Heart, Zap, Flame, Trophy } from "lucide-react"
+import forumService, { ForumBadge } from "@/lib/services/forumService"
 
 export default function BadgePage() {
   // 활성 탭 상태
   const [activeTab, setActiveTab] = useState("all");
+  const [badges, setBadges] = useState<(ForumBadge & { progress: number, total: number, acquired: boolean })[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userStats, setUserStats] = useState({ 
+    badgeCount: 0, 
+    totalBadges: 0, 
+    title: "새싹", 
+    points: 0 
+  });
 
-  // 배지/칭호 데이터
-  const badges = [
-    {
-      id: 1,
-      name: "새싹",
-      description: "가입을 완료한 사용자",
-      category: "기본",
-      icon: <Award className="h-8 w-8 text-green-500" />,
-      progress: 100,
-      total: 100,
-      acquired: true,
-      unlockCondition: "가입 완료 시 자동 획득"
-    },
-    {
-      id: 2,
-      name: "로봇 애호가",
-      description: "500 포인트를 획득한 사용자",
-      category: "활동",
-      icon: <Crown className="h-8 w-8 text-blue-500" />,
-      progress: 320,
-      total: 500,
-      acquired: false,
-      unlockCondition: "포럼 활동으로 500 포인트 획득"
-    },
-    {
-      id: 3,
-      name: "로봇 전문가",
-      description: "1500 포인트를 획득한 사용자",
-      category: "활동",
-      icon: <Star className="h-8 w-8 text-yellow-500" />,
-      progress: 320,
-      total: 1500,
-      acquired: false,
-      unlockCondition: "포럼 활동으로 1500 포인트 획득"
-    },
-    {
-      id: 4,
-      name: "문서 전문가",
-      description: "문서 10개 이상 작성 또는 수정",
-      category: "기여",
-      icon: <BookOpen className="h-8 w-8 text-purple-500" />,
-      progress: 4,
-      total: 10,
-      acquired: false,
-      unlockCondition: "기술 문서 10개 이상 작성 또는 수정"
-    },
-    {
-      id: 5,
-      name: "친절한 답변자",
-      description: "채택된 답변 5개 이상",
-      category: "포럼",
-      icon: <MessageSquare className="h-8 w-8 text-blue-400" />,
-      progress: 3,
-      total: 5,
-      acquired: false,
-      unlockCondition: "포럼에서 5개 이상의 채택된 답변 작성"
-    },
-    {
-      id: 6,
-      name: "열정적인 기여자",
-      description: "모든 카테고리에서 기여 활동",
-      category: "기여",
-      icon: <Flame className="h-8 w-8 text-red-500" />,
-      progress: 3,
-      total: 5,
-      acquired: false,
-      unlockCondition: "모든 섹션(문서, 위키, 포럼 등)에서 최소 1회 이상 기여"
-    },
-    {
-      id: 7,
-      name: "문제해결사",
-      description: "포럼에서 10개 이상의 질문 해결",
-      category: "포럼",
-      icon: <Zap className="h-8 w-8 text-amber-500" />,
-      progress: 6,
-      total: 10,
-      acquired: false,
-      unlockCondition: "포럼에서 10개 이상의 질문에 채택된 답변 제공"
-    },
-    {
-      id: 8,
-      name: "인기 기여자",
-      description: "작성한 콘텐츠가 50개 이상의 좋아요를 받음",
-      category: "인기",
-      icon: <Heart className="h-8 w-8 text-red-400" />,
-      progress: 28,
-      total: 50,
-      acquired: false,
-      unlockCondition: "작성한 콘텐츠(문서, 위키, 포럼 답변 등)가 누적 50개 이상의 좋아요 받기"
-    },
-    {
-      id: 9,
-      name: "RoboSSAFYens",
-      description: "관리자에 의해 부여되는 특별 칭호",
-      category: "특별",
-      icon: <Trophy className="h-8 w-8 text-amber-600" />,
-      progress: 0,
-      total: 100,
-      acquired: false,
-      unlockCondition: "뛰어난 기여와 활동으로 관리자에 의해 부여"
-    },
-  ];
+  // 배지 아이콘 매핑 함수
+  const getBadgeIcon = (name: string) => {
+    const icons = {
+      "새싹": <Award className="h-8 w-8 text-green-500" />,
+      "로봇 애호가": <Crown className="h-8 w-8 text-blue-500" />,
+      "로봇 전문가": <Star className="h-8 w-8 text-yellow-500" />,
+      "문서 전문가": <BookOpen className="h-8 w-8 text-purple-500" />,
+      "친절한 답변자": <MessageSquare className="h-8 w-8 text-blue-400" />,
+      "열정적인 기여자": <Flame className="h-8 w-8 text-red-500" />,
+      "문제해결사": <Zap className="h-8 w-8 text-amber-500" />,
+      "인기 기여자": <Heart className="h-8 w-8 text-red-400" />,
+      "RoboSSAFYens": <Trophy className="h-8 w-8 text-amber-600" />,
+    };
+    
+    const lowerName = name.toLowerCase();
+    // 이름에 포함된 키워드로 아이콘 찾기
+    for (const [key, icon] of Object.entries(icons)) {
+      if (lowerName.includes(key.toLowerCase())) {
+        return icon;
+      }
+    }
+    
+    // 기본 아이콘
+    return <Award className="h-8 w-8 text-gray-500" />;
+  };
+
+  useEffect(() => {
+    const fetchBadges = async () => {
+      setLoading(true);
+      try {
+        // 배지 목록 가져오기
+        const response = await forumService.getBadges();
+        
+        // 획득 여부 및 진행도 정보 설정 - 실제 구현에서는 API에서 가져온 데이터로 설정
+        const enhancedBadges = response.badges.map(badge => {
+          // 임시 로직: 배지 ID가 1이면 이미 획득, 나머지는 진행 중
+          const acquired = badge.id === 1;
+          const progress = acquired ? 100 : Math.floor(Math.random() * 80);
+          const total = 100;
+          
+          return {
+            ...badge,
+            acquired,
+            progress,
+            total
+          };
+        });
+        
+        setBadges(enhancedBadges);
+        
+        // 사용자 배지 통계 설정 - 실제 구현에서는 API를 통해 가져온 데이터로 설정
+        setUserStats({
+          badgeCount: 1,
+          totalBadges: enhancedBadges.length,
+          title: "새싹",
+          points: 320
+        });
+      } catch (error) {
+        console.error("배지 로딩 오류:", error);
+        // 에러 시 기본 데이터로 대체
+        setBadges([
+          {
+            id: 1,
+            name: "새싹",
+            description: "가입을 완료한 사용자",
+            criteria: "가입 완료 시 자동 획득",
+            categoryId: 1,
+            image: "",
+            createdAt: new Date().toISOString(),
+            progress: 100,
+            total: 100,
+            acquired: true
+          }
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBadges();
+  }, []);
 
   // 카테고리별 필터링
+  const getBadgeCategory = (badge: ForumBadge) => {
+    const categories = ["기본", "활동", "기여", "포럼", "특별"];
+    // 카테고리ID가 범위를 벗어나면 기본 카테고리 반환
+    return categories[(badge.categoryId || 1) - 1] || "기본";
+  };
+
   const filteredBadges = activeTab === "all" 
     ? badges 
-    : badges.filter(badge => badge.category.toLowerCase() === activeTab);
+    : badges.filter(badge => getBadgeCategory(badge) === activeTab);
 
   // 보유/미보유 분류
   const acquiredBadges = badges.filter(badge => badge.acquired);
-  const unacquiredBadges = badges.filter(badge => !badge.acquired);
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto py-8 text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-4 text-gray-500">배지 정보를 불러오는 중...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -138,15 +140,15 @@ export default function BadgePage() {
         <div className="flex flex-wrap gap-3">
           <div className="flex items-center gap-2">
             <span className="text-gray-600">보유한 배지:</span>
-            <Badge className="bg-blue-100 text-blue-800">{acquiredBadges.length}/{badges.length}</Badge>
+            <Badge className="bg-blue-100 text-blue-800">{userStats.badgeCount}/{userStats.totalBadges}</Badge>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-gray-600">현재 칭호:</span>
-            <Badge className="bg-green-100 text-green-800">새싹</Badge>
+            <Badge className="bg-green-100 text-green-800">{userStats.title}</Badge>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-gray-600">포인트:</span>
-            <Badge className="bg-purple-100 text-purple-800">320</Badge>
+            <Badge className="bg-purple-100 text-purple-800">{userStats.points}</Badge>
           </div>
         </div>
       </div>
@@ -167,85 +169,100 @@ export default function BadgePage() {
           
           <TabsContent value="all" className="p-0">
             <div className="divide-y">
-              {filteredBadges.map((badge) => (
-                <div key={badge.id} className="p-4">
-                  <div className="flex items-start">
-                    <div className={`p-3 rounded-lg mr-4 ${badge.acquired ? 'bg-blue-100' : 'bg-gray-100'}`}>
-                      {badge.icon}
-                    </div>
-                    <div className="flex-grow">
-                      <div className="flex justify-between mb-1">
-                        <div>
-                          <h3 className="font-semibold text-lg">{badge.name}</h3>
-                          <p className="text-sm text-gray-600 mb-1">{badge.description}</p>
+              {filteredBadges.length > 0 ? (
+                filteredBadges.map((badge) => (
+                  <div key={badge.id} className="p-4">
+                    <div className="flex items-start">
+                      <div className={`p-3 rounded-lg mr-4 ${badge.acquired ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                        {badge.image ? (
+                          <img src={badge.image} alt={badge.name} className="h-8 w-8" />
+                        ) : getBadgeIcon(badge.name)}
+                      </div>
+                      <div className="flex-grow">
+                        <div className="flex justify-between mb-1">
+                          <div>
+                            <h3 className="font-semibold text-lg">{badge.name}</h3>
+                            <p className="text-sm text-gray-600 mb-1">{badge.description}</p>
+                          </div>
+                          <Badge 
+                            className={badge.acquired 
+                              ? "bg-green-100 text-green-800" 
+                              : "bg-gray-100 text-gray-800"}
+                          >
+                            {badge.acquired ? "획득" : "미획득"}
+                          </Badge>
                         </div>
-                        <Badge 
-                          className={badge.acquired 
-                            ? "bg-green-100 text-green-800" 
-                            : "bg-gray-100 text-gray-800"}
-                        >
-                          {badge.acquired ? "획득" : "미획득"}
-                        </Badge>
-                      </div>
-                      <div className="mb-1">
-                        <Progress 
-                          value={(badge.progress / badge.total) * 100} 
-                          className="h-2"
-                        />
-                      </div>
-                      <div className="flex justify-between text-xs text-gray-600">
-                        <span>진행도: {badge.progress}/{badge.total}</span>
-                        <span>{badge.unlockCondition}</span>
+                        <div className="mb-1">
+                          <Progress 
+                            value={(badge.progress / badge.total) * 100} 
+                            className="h-2"
+                          />
+                        </div>
+                        <div className="flex justify-between text-xs text-gray-600">
+                          <span>진행도: {badge.progress}/{badge.total}</span>
+                          <span>{badge.criteria}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
+                ))
+              ) : (
+                <div className="p-8 text-center">
+                  <p className="text-gray-500">해당 카테고리의 배지가 없습니다.</p>
                 </div>
-              ))}
+              )}
             </div>
           </TabsContent>
           
-          {/* 다른 탭들도 동일한 내용 */}
-          <TabsContent value="기본" className="p-0">
-            <div className="divide-y">
-              {filteredBadges.map((badge) => (
-                <div key={badge.id} className="p-4">
-                  {/* 위와 동일한 배지 카드 내용 */}
-                  <div className="flex items-start">
-                    <div className={`p-3 rounded-lg mr-4 ${badge.acquired ? 'bg-blue-100' : 'bg-gray-100'}`}>
-                      {badge.icon}
-                    </div>
-                    <div className="flex-grow">
-                      <div className="flex justify-between mb-1">
-                        <div>
-                          <h3 className="font-semibold text-lg">{badge.name}</h3>
-                          <p className="text-sm text-gray-600 mb-1">{badge.description}</p>
+          {/* 각 카테고리 탭 */}
+          {["기본", "활동", "기여", "포럼", "특별"].map(category => (
+            <TabsContent key={category} value={category} className="p-0">
+              <div className="divide-y">
+                {filteredBadges.length > 0 ? (
+                  filteredBadges.map((badge) => (
+                    <div key={badge.id} className="p-4">
+                      <div className="flex items-start">
+                        <div className={`p-3 rounded-lg mr-4 ${badge.acquired ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                          {badge.image ? (
+                            <img src={badge.image} alt={badge.name} className="h-8 w-8" />
+                          ) : getBadgeIcon(badge.name)}
                         </div>
-                        <Badge 
-                          className={badge.acquired 
-                            ? "bg-green-100 text-green-800" 
-                            : "bg-gray-100 text-gray-800"}
-                        >
-                          {badge.acquired ? "획득" : "미획득"}
-                        </Badge>
-                      </div>
-                      <div className="mb-1">
-                        <Progress 
-                          value={(badge.progress / badge.total) * 100} 
-                          className="h-2"
-                        />
-                      </div>
-                      <div className="flex justify-between text-xs text-gray-600">
-                        <span>진행도: {badge.progress}/{badge.total}</span>
-                        <span>{badge.unlockCondition}</span>
+                        <div className="flex-grow">
+                          <div className="flex justify-between mb-1">
+                            <div>
+                              <h3 className="font-semibold text-lg">{badge.name}</h3>
+                              <p className="text-sm text-gray-600 mb-1">{badge.description}</p>
+                            </div>
+                            <Badge 
+                              className={badge.acquired 
+                                ? "bg-green-100 text-green-800" 
+                                : "bg-gray-100 text-gray-800"}
+                            >
+                              {badge.acquired ? "획득" : "미획득"}
+                            </Badge>
+                          </div>
+                          <div className="mb-1">
+                            <Progress 
+                              value={(badge.progress / badge.total) * 100} 
+                              className="h-2"
+                            />
+                          </div>
+                          <div className="flex justify-between text-xs text-gray-600">
+                            <span>진행도: {badge.progress}/{badge.total}</span>
+                            <span>{badge.criteria}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="p-8 text-center">
+                    <p className="text-gray-500">해당 카테고리의 배지가 없습니다.</p>
                   </div>
-                </div>
-              ))}
-            </div>
-          </TabsContent>
-          
-          {/* 나머지 탭 내용도 동일하게 반복 (활동, 기여, 포럼, 특별) */}
+                )}
+              </div>
+            </TabsContent>
+          ))}
         </Tabs>
       </div>
     </div>

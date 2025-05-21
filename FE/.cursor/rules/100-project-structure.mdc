@@ -1,7 +1,7 @@
 ---
 description: 
 globs: 
-alwaysApply: true
+alwaysApply: false
 ---
 # RoboSSAFYens 프로젝트 구조 가이드라인
 

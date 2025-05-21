@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Plus, Trash2, FileDown, Upload } from "lucide-react"
 import * as THREE from 'three'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
-// URDF 로더는 현재 구현 중입니다
-// import URDFLoader from 'urdf-loader'
+// URDF 로더 라이브러리 가져오기
+import URDFLoader from '@/lib/urdf-loader/URDFLoader.js'
 
 // 전역 STL 모델 캐시
 const stlCache: Record<string, THREE.BufferGeometry> = {};
@@ -20,6 +20,146 @@ interface RobotModelProps {
   color: string;
   jointValues: number[];
   urdfModel?: any; // URDF 모델이 있을 경우
+}
+
+// URDF 모델을 로드하는 커스텀 훅
+function useURDFModel(path: string, color: string) {
+  const [model, setModel] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    
+    const manager = new THREE.LoadingManager();
+    const loader = new URDFLoader(manager);
+    
+    // 패키지 경로 설정 - package:// 로 시작하는 경로를 public 경로로 매핑
+    loader.packages = {
+      'so_100_arm': '' // '/models' 에서 빈 문자열로 변경
+    };
+    
+    // 기본 설정 변경
+    loader.parseVisual = true;  // 비주얼 요소 파싱
+    loader.parseCollision = false; // 충돌 요소는 파싱하지 않음
+    
+    // 커스텀 메시 로더 설정 (재질 적용을 위해)
+    loader.loadMeshCb = (path, loadingManager, done) => {
+      console.log(`메시 로드 시도: ${path}`);
+      
+      if (path.toLowerCase().endsWith('.stl')) {
+        const stlLoader = new STLLoader(loadingManager);
+        stlLoader.load(
+          path, 
+          (geometry: THREE.BufferGeometry) => {
+            console.log(`STL 로드 성공: ${path}`);
+            const material = new THREE.MeshStandardMaterial({
+              color: new THREE.Color(color),
+              roughness: 0.5,
+              metalness: 0.7
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            done(mesh);
+          },
+          undefined,
+          (error: Error) => {
+            console.error(`STL 로드 오류: ${path}`, error);
+            done(null, error);
+          }
+        );
+      } else {
+        // 기본 메시 로더 사용
+        console.log(`기본 로더 사용: ${path}`);
+        loader.defaultMeshLoader(path, loadingManager, done);
+      }
+    };
+
+    console.log(`URDF 모델 로드 시작: ${path}`);
+    
+    try {
+      loader.load(
+        path,
+        (result: any) => {
+          console.log('URDF 모델 로드 완료:', result);
+          
+          // 로봇의 계층 구조 출력
+          console.log('로봇 구조 디버그:');
+          let linkCount = 0;
+          let meshCount = 0;
+          
+          result.traverse((child: any) => {
+            // 로봇 구조 디버깅
+            const type = child.type || 'unknown';
+            const name = child.name || 'unnamed';
+            console.log(`노드: ${name}, 타입: ${type}`);
+            
+            if (child.isURDFLink) linkCount++;
+            
+            // 메시에 재질 적용
+            if (child instanceof THREE.Mesh) {
+              meshCount++;
+              console.log(`메시 발견: ${name}`);
+              
+              child.material = new THREE.MeshStandardMaterial({
+                color: new THREE.Color(color),
+                roughness: 0.5,
+                metalness: 0.7
+              });
+              child.castShadow = true;
+              child.receiveShadow = true;
+            }
+          });
+          
+          console.log(`링크 수: ${linkCount}, 메시 수: ${meshCount}`);
+          
+          // 모델 위치 조정
+          result.position.set(0, 0, 0);
+          
+          // 모델이 제대로 보이도록 크기 조정 - URDF 모델은 보통 미터 단위
+          const scale = 0.01; // 센티미터로 변환
+          result.scale.set(scale, scale, scale);
+          
+          // 모델 방향 조정 (필요시)
+          // result.rotation.set(Math.PI/2, 0, 0);
+          
+          // 바운딩 박스로 모델 실제 크기 확인
+          const box = new THREE.Box3().setFromObject(result);
+          console.log('모델 바운딩 박스:', box.min, box.max);
+          console.log('모델 크기:', 
+            box.max.x - box.min.x,
+            box.max.y - box.min.y,
+            box.max.z - box.min.z
+          );
+          
+          setModel(result);
+          setLoading(false);
+        },
+        (progress: any) => {
+          // 로드 진행 상황 로깅
+          if (progress) {
+            console.log(`URDF 로드 진행 중: ${Math.round((progress.loaded / progress.total) * 100)}%`);
+          }
+        },
+        (error: any) => {
+          console.error('URDF 로드 오류:', error);
+          setError(`URDF 파일 로드 실패: ${error.message || error}`);
+          setLoading(false);
+        }
+      );
+    } catch (e) {
+      console.error('URDF 로드 중 예외 발생:', e);
+      setError(`URDF 로드 중 예외 발생: ${e instanceof Error ? e.message : String(e)}`);
+      setLoading(false);
+    }
+    
+    return () => {
+      // 필요시 정리 작업
+    };
+  }, [path, color]);
+
+  return { model, loading, error };
 }
 
 // STL 모델 로드를 위한 커스텀 훅
@@ -117,7 +257,7 @@ const SO100ArmModel = memo(function SO100ArmModel({ color, jointValues, urdfMode
     })
   , [color]);
 
-  // 각 부품의 STL 모델 로드
+  // STL 모델 로드
   const baseModel = useSTLModel('/models/so_100_arm_5dof/meshes/Base.STL', darkMaterial);
   const shoulderModel = useSTLModel('/models/so_100_arm_5dof/meshes/Shoulder_Rotation_Pitch.STL', mainMaterial);
   const upperArmModel = useSTLModel('/models/so_100_arm_5dof/meshes/Upper_Arm.STL', mainMaterial);
@@ -128,160 +268,184 @@ const SO100ArmModel = memo(function SO100ArmModel({ color, jointValues, urdfMode
   
   // 모델 로딩 상태
   const isLoading = baseModel.loading || shoulderModel.loading || upperArmModel.loading ||
-                    lowerArmModel.loading || wristModel.loading || 
-                    fixedGripperModel.loading || movingJawModel.loading;
-
-  // 로딩 에러 확인
-  const loadError = baseModel.error || shoulderModel.error || upperArmModel.error ||
-                    lowerArmModel.error || wristModel.error || 
-                    fixedGripperModel.error || movingJawModel.error;
-  
-  // 관절 각도 업데이트
-  useEffect(() => {
-    // Shoulder Rotation (0번 관절) - Y축 기준 회전
-    if (shoulderRotationRef.current) {
-      shoulderRotationRef.current.rotation.y = THREE.MathUtils.degToRad(jointValues[0]);
-    }
-    
-    // Shoulder Pitch (1번 관절) - X축 기준 회전
-    if (shoulderPitchRef.current) {
-      shoulderPitchRef.current.rotation.x = THREE.MathUtils.degToRad(jointValues[1]);
-    }
-    
-    // Elbow (2번 관절) - X축 기준 회전
-    if (elbowRef.current) {
-      elbowRef.current.rotation.x = THREE.MathUtils.degToRad(jointValues[2]);
-    }
-    
-    // Wrist Pitch (3번 관절) - X축 기준 회전
-    if (wristPitchRef.current) {
-      wristPitchRef.current.rotation.x = THREE.MathUtils.degToRad(jointValues[3]);
-    }
-    
-    // Wrist Roll (4번 관절) - Y축 기준 회전
-    if (wristRollRef.current) {
-      wristRollRef.current.rotation.y = THREE.MathUtils.degToRad(jointValues[4]);
-    }
-    
-    // 그리퍼 (5번 관절) - Z축 기준 회전 (열고 닫힘 제어)
-    if (gripperRef.current) {
-      // 그리퍼 열림 각도: 0~45도 범위 내에서 매핑
-      const openAngle = Math.min(45, Math.max(0, jointValues[5])) / 45;
-      gripperRef.current.rotation.z = THREE.MathUtils.degToRad(openAngle * 30); // 최대 30도까지 벌어짐
-    }
-  }, [jointValues]);
-
-  // URDF 모델이 있으면 그것을 사용
-  if (urdfModel) {
-    return <primitive object={urdfModel} />;
-  }
-
+                   lowerArmModel.loading || wristModel.loading || 
+                   fixedGripperModel.loading || movingJawModel.loading;
+                   
   // 로딩 중이면 간단한 로딩 표시
   if (isLoading) {
     return (
       <mesh position={[0, 0, 0]}>
         <sphereGeometry args={[0.1, 16, 16]} />
         <meshStandardMaterial color={color} opacity={0.5} transparent={true} />
-        <group position={[0, 0.2, 0]}>
-          <mesh>
-            <boxGeometry args={[0.05, 0.05, 0.05]} />
-            <meshStandardMaterial color={color} />
-          </mesh>
-        </group>
+      </mesh>
+    );
+  }
+  
+  // 에러 확인
+  const hasError = baseModel.error || shoulderModel.error || upperArmModel.error || 
+                  lowerArmModel.error || wristModel.error || 
+                  fixedGripperModel.error || movingJawModel.error;
+                  
+  if (hasError) {
+    console.error("STL 모델 로드 오류 발생");
+    return (
+      <mesh position={[0, 0, 0]}>
+        <boxGeometry args={[0.2, 0.2, 0.2]} />
+        <meshStandardMaterial color="red" />
       </mesh>
     );
   }
 
-  // 로드 에러가 있으면 기본 모델 사용
-  if (loadError) {
-    console.error("STL 모델 로딩 오류, 기본 모델 사용", loadError);
-    return (
-      <group ref={baseRef}>
-        {/* 베이스 */}
-        <mesh position={[0, -0.2, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[0.1, 0.12, 0.05, 16]} />
-          <meshStandardMaterial color={darkMaterial.color} />
-        </mesh>
-        <mesh position={[0, -0.15, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[0.08, 0.08, 0.1, 16]} />
-          <meshStandardMaterial color={mainMaterial.color} />
-        </mesh>
-        
-        {/* Shoulder_Rotation 관절 - 기존 코드와 동일 */}
-        {/* ... 기존 도형 기반 모델 렌더링 ... */}
-      </group>
-    );
-  }
-  
-  // STL 모델 렌더링
+  // 관절 각도 계산 (라디안 변환)
+  const shoulderRotation = THREE.MathUtils.degToRad(jointValues[0]);
+  const shoulderPitch = THREE.MathUtils.degToRad(jointValues[1]);
+  const elbow = THREE.MathUtils.degToRad(jointValues[2]);
+  const wristPitch = THREE.MathUtils.degToRad(jointValues[3]);
+  const wristRoll = THREE.MathUtils.degToRad(jointValues[4]);
+  // 그리퍼 각도 계산 - 슬라이더 값을 직접 사용
+  const gripper = THREE.MathUtils.degToRad(jointValues[5]); // 슬라이더 값을 바로 라디안으로 변환
+
+  // STL 모델 렌더링 (스케일을 4.0으로 설정)
   return (
-    <group ref={baseRef} scale={[0.01, 0.01, 0.01]}>
+    <group scale={[4.0, 4.0, 4.0]} rotation={[-Math.PI/2, 0, 0]} position={[0, -0.25, 0]}>
       {/* 베이스 - 원점에 위치 */}
-      {baseModel.model && <primitive object={baseModel.model.clone()} />}
-      
-      {/* Shoulder Rotation 관절 */}
-      <group ref={shoulderRotationRef} position={[0, -4.52, 1.65]} rotation={[Math.PI/2, 0, 0]}>
-        {shoulderModel.model && <primitive object={shoulderModel.model.clone()} />}
+      <group position={[0, 0, 0]} rotation={[0, 0, 0]}>
+        {baseModel.model && <primitive object={baseModel.model.clone()} />}
         
-        {/* Shoulder Pitch 관절 */}
-        <group ref={shoulderPitchRef} position={[0, 10.25, 3.06]} rotation={[0, 0, 0]}>
-          {upperArmModel.model && <primitive object={upperArmModel.model.clone()} />}
-          
-          {/* Elbow 관절 */}
-          <group ref={elbowRef} position={[0, 11.257, 2.8]} rotation={[0, 0, 0]}>
-            {lowerArmModel.model && <primitive object={lowerArmModel.model.clone()} />}
+        {/* Shoulder Rotation 관절 - URDF: xyz="0 -0.0452 0.0165" rpy="1.5708 0 0" axis="0 1 0" */}
+        <group position={[0, -0.0452, 0.0165]} rotation={[Math.PI/2, 0, 0]}>
+          <group rotation={[0, shoulderRotation, 0]}>
+            {shoulderModel.model && <primitive object={shoulderModel.model.clone()} />}
             
-            {/* Wrist Pitch 관절 */}
-            <group ref={wristPitchRef} position={[0, 0.52, 13.49]} rotation={[0, 0, 0]}>
-              {wristModel.model && <primitive object={wristModel.model.clone()} />}
-              
-              {/* Wrist Roll 관절 */}
-              <group ref={wristRollRef} position={[0, -6.01, 0]} rotation={[0, 0, 0]}>
-                {fixedGripperModel.model && <primitive object={fixedGripperModel.model.clone()} />}
+            {/* Shoulder Pitch 관절 - URDF: xyz="0 0.1025 0.0306" rpy="0 0 0" axis="1 0 0" */}
+            <group position={[0, 0.1025, 0.0306]} rotation={[0, 0, 0]}>
+              <group rotation={[shoulderPitch, 0, 0]}>
+                {upperArmModel.model && <primitive object={upperArmModel.model.clone()} />}
                 
-                {/* 그리퍼 */}
-                <group ref={gripperRef} position={[-2.02, -2.44, 0]} rotation={[Math.PI, 0, Math.PI]}>
-                  {movingJawModel.model && <primitive object={movingJawModel.model.clone()} />}
+                {/* Elbow 관절 - URDF: xyz="0 0.11257 0.028" rpy="0 0 0" axis="1 0 0" */}
+                <group position={[0, 0.11257, 0.028]} rotation={[0, 0, 0]}>
+                  <group rotation={[elbow, 0, 0]}>
+                    {lowerArmModel.model && <primitive object={lowerArmModel.model.clone()} />}
+                    
+                    {/* Wrist Pitch 관절 - URDF: xyz="0 0.0052 0.1349" rpy="0 0 0" axis="1 0 0" */}
+                    <group position={[0, 0.0052, 0.1349]} rotation={[0, 0, 0]}>
+                      <group rotation={[wristPitch, 0, 0]}>
+                        {wristModel.model && <primitive object={wristModel.model.clone()} />}
+                        
+                        {/* Wrist Roll 관절 - URDF: xyz="0 -0.0601 0" rpy="0 0 0" axis="0 1 0" */}
+                        <group position={[0, -0.0601, 0]} rotation={[0, 0, 0]}>
+                          <group rotation={[0, wristRoll, 0]}>
+                            {fixedGripperModel.model && <primitive object={fixedGripperModel.model.clone()} />}
+                            
+                            {/* 그리퍼 - URDF: xyz="-0.0202 -0.0244 0" rpy="3.1416 0 3.1416" axis="0 0 1" */}
+                            <group position={[-0.0202, -0.0244, 0]} rotation={[Math.PI, 0, Math.PI]}>
+                              <group rotation={[0, 0, gripper]}>
+                                {movingJawModel.model && <primitive object={movingJawModel.model.clone()} />}
+                              </group>
+                            </group>
+                          </group>
+                        </group>
+                      </group>
+                    </group>
+                  </group>
                 </group>
               </group>
             </group>
           </group>
         </group>
       </group>
-      
-      {/* 베이스 플레이트 */}
-      <mesh position={[0, -25, 0]} receiveShadow>
-        <boxGeometry args={[30, 2, 30]} />
-        <meshStandardMaterial color={"#444"} />
-      </mesh>
     </group>
   );
 });
 
-// 간단한 URDF 뷰어 컴포넌트 (임시 구현)
+// URDF 뷰어 컴포넌트
 function URDFViewer({ 
   urdfPath, 
   jointValues, 
-  onLoad 
+  onLoad,
+  color
 }: { 
   urdfPath: string; 
   jointValues: number[]; 
   onLoad: (robot: any) => void;
+  color: string;
 }) {
-  // 현재는 URDF를 로드하지 않고 간단한 메시지만 표시
-  useEffect(() => {
-    console.log("URDF 기능은 아직 구현 중입니다. 기본 모델을 사용합니다.");
-    
-    // 임시 로봇 생성
-    const robot = new THREE.Group();
-    // @ts-ignore
-    robot.isRobot = true;
-    
-    // 로드 완료 콜백
-    onLoad(robot);
-  }, [onLoad]);
+  // URDF 모델 로드
+  const { model, loading, error } = useURDFModel(urdfPath, color);
+  const controlsRef = useRef<any>(null);
+  const { camera } = useThree();
   
-  return null;
+  // 카메라와 모델 위치 조정
+  useEffect(() => {
+    if (model && !loading && !error) {
+      // 모델의 바운딩 박스 계산
+      const box = new THREE.Box3().setFromObject(model);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      
+      // 모델의 중심으로 카메라 타겟 설정
+      if (controlsRef.current) {
+        controlsRef.current.target.copy(center);
+        
+        // 모델 크기에 맞게 카메라 위치 조정
+        const maxDim = Math.max(size.x, size.y, size.z);
+        
+        // 카메라 위치 설정 (타입에 관계없이)
+        camera.position.set(
+          center.x + maxDim * 0.5,
+          center.y + maxDim * 0.5, 
+          center.z + maxDim
+        );
+        
+        // PerspectiveCamera에 대한 추가 설정
+        if ('fov' in camera) {
+          camera.updateProjectionMatrix();
+        }
+        
+        controlsRef.current.update();
+      }
+    }
+  }, [model, loading, error, camera]);
+  
+  // 로드 완료 콜백
+  useEffect(() => {
+    if (model && !loading && !error) {
+      onLoad(model);
+    }
+  }, [model, loading, error, onLoad]);
+  
+  if (loading) {
+    return (
+      <mesh position={[0, 0, 0]}>
+        <sphereGeometry args={[0.1, 16, 16]} />
+        <meshStandardMaterial color={color} opacity={0.5} transparent={true} />
+      </mesh>
+    );
+  }
+  
+  if (error) {
+    console.error("URDF 로드 오류:", error);
+    return (
+      <mesh position={[0, 0, 0]}>
+        <boxGeometry args={[0.2, 0.2, 0.2]} />
+        <meshStandardMaterial color="red" />
+      </mesh>
+    );
+  }
+  
+  return (
+    <>
+      <primitive object={model} />
+      <OrbitControls 
+        ref={controlsRef}
+        enablePan={true}
+        enableZoom={true}
+        enableRotate={true}
+        minDistance={0.1}
+        maxDistance={10}
+      />
+    </>
+  );
 }
 
 // 로봇 타입 정의
@@ -310,8 +474,6 @@ export default function OffsetSimPage() {
   // 로딩 상태
   const [loading, setLoading] = useState<boolean>(false);
   const [selectedRobot, setSelectedRobot] = useState<number | null>(null);
-  // URDF 로더 준비 상태 - 현재 사용하지 않음
-  const [urdfLoaderReady, setUrdfLoaderReady] = useState<boolean>(false);
 
   // 관절 값 업데이트 핸들러
   const updateJointValue = (robotId: number, jointIndex: number, value: number) => {
@@ -368,6 +530,9 @@ export default function OffsetSimPage() {
   const removeRobot = (id: number) => {
     if (robots.length <= 1) return; // 최소 1개는 유지
     setRobots(robots.filter(robot => robot.id !== id));
+    if (selectedRobot === id) {
+      setSelectedRobot(null);
+    }
   };
 
   // 설정 저장
@@ -392,43 +557,6 @@ export default function OffsetSimPage() {
       jointValues: [0, 0, 0, 0, 0, 0],
       offsets: [0, 0, 0, 0, 0, 0]
     })));
-  };
-
-  // URDF 모델 로드 함수 (임시 구현 - 현재는 알림만 표시)
-  const loadURDFModel = (event: React.ChangeEvent<HTMLInputElement>, robotId: number) => {
-    if (!event.target.files || event.target.files.length === 0) return;
-    
-    setLoading(true);
-    setSelectedRobot(robotId);
-    
-    // 임시 알림
-    alert("URDF 파일 로딩 기능은 현재 개발 중입니다. 곧 사용 가능해질 예정입니다.");
-    
-    // 로딩 상태 해제
-    setLoading(false);
-  };
-
-  // URDF 모델 로드 완료 핸들러
-  const handleModelLoad = (robotId: number, model: any) => {
-    setRobots(prev => 
-      prev.map(robot => 
-        robot.id === robotId 
-          ? { ...robot, urdfModel: model }
-          : robot
-      )
-    );
-  };
-
-  // 샘플 URDF 로드 (임시 구현 - 현재는 알림만 표시)
-  const loadSampleURDF = (robotId: number) => {
-    // 임시 알림
-    alert("샘플 URDF 로딩 기능은 현재 개발 중입니다. 곧 사용 가능해질 예정입니다.");
-    
-    setLoading(true);
-    setSelectedRobot(robotId);
-    
-    // 잠시 후 로딩 상태 해제
-    setTimeout(() => setLoading(false), 500);
   };
 
   // 로봇 배치를 위한 그리드 클래스 계산
@@ -484,7 +612,7 @@ export default function OffsetSimPage() {
 
       <div className="mb-4 text-sm">
         <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-700">
-          <p><strong>정보:</strong> STL 모델을 불러오고 있습니다. 모델 크기가 크므로 로드에 시간이 걸릴 수 있습니다. 브라우저 콘솔에서 진행 상태를 확인할 수 있습니다.</p>
+          <p><strong>정보:</strong> STL 모델을 불러오고 있습니다. 모델 크기가 크므로 로드에 시간이 걸릴 수 있습니다. 스케일을 4.0으로 설정하여 모델이 잘 보이도록 했습니다.</p>
         </div>
       </div>
 
@@ -501,30 +629,6 @@ export default function OffsetSimPage() {
                   )}
                 </div>
                 <div className="flex items-center space-x-1">
-                  <input
-                    type="file" 
-                    id={`urdf-upload-${robot.id}`} 
-                    className="hidden"
-                    accept=".urdf,.xml"
-                    onChange={(e) => loadURDFModel(e, robot.id)}
-                  />
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 text-xs"
-                    onClick={() => document.getElementById(`urdf-upload-${robot.id}`)?.click()}
-                  >
-                    <Upload className="h-3 w-3 mr-1" />
-                    <span className="opacity-50">URDF</span>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 text-xs opacity-50"
-                    onClick={() => loadSampleURDF(robot.id)}
-                  >
-                    샘플
-                  </Button>
                   {robots.length > 1 && (
                     <Button 
                       size="sm" 
@@ -548,7 +652,7 @@ export default function OffsetSimPage() {
                   <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={0.7} castShadow />
                   <pointLight position={[-10, -10, -10]} intensity={0.5} />
                   
-                  {/* SO-100 로봇 모델 */}
+                  {/* SO-100 로봇 모델 - STL 파일 직접 로드 */}
                   <SO100ArmModel 
                     color={robot.color}
                     jointValues={robot.jointValues.map(
@@ -556,17 +660,11 @@ export default function OffsetSimPage() {
                     )}
                   />
                   
-                  <OrbitControls 
-                    enablePan={true}
-                    enableZoom={true}
-                    enableRotate={true}
-                    minDistance={0.5}
-                    maxDistance={5}
-                  />
                   <Environment preset="studio" />
                   {/* 그리드 헬퍼 추가 */}
                   <gridHelper args={[2, 20]} position={[0, -0.25, 0]} />
                   <axesHelper args={[1]} />
+                  <OrbitControls enablePan={true} enableZoom={true} enableRotate={true} />
                 </Canvas>
               </div>
             </div>
@@ -594,23 +692,23 @@ export default function OffsetSimPage() {
                   {/* 그리퍼 제어 (열기/닫기) */}
                   <div>
                     <label className="block text-xs font-medium mb-1">
-                      그리퍼: {robot.jointValues[5] === 0 ? "닫힘" : robot.jointValues[5] === 45 ? "열림" : `${robot.jointValues[5]}°`}
+                      그리퍼: {robot.jointValues[5] === -10 ? "완전닫힘" : robot.jointValues[5] === 90 ? "완전열림" : `${robot.jointValues[5]}°`}
                     </label>
                     <Slider 
                       value={[robot.jointValues[5]]} 
-                      min={0} 
-                      max={45} 
+                      min={-10} 
+                      max={90} 
                       step={1}
                       onValueChange={(vals) => updateJointValue(robot.id, 5, vals[0])}
                     />
                     {/* 그리퍼 빠른 제어 버튼 */}
                     <div className="flex gap-2 mt-1">
                       <Button size="sm" variant="outline" className="text-xs flex-1 h-7"
-                        onClick={() => updateJointValue(robot.id, 5, 0)}>
+                        onClick={() => updateJointValue(robot.id, 5, -10)}>
                         닫기
                       </Button>
                       <Button size="sm" variant="outline" className="text-xs flex-1 h-7"
-                        onClick={() => updateJointValue(robot.id, 5, 45)}>
+                        onClick={() => updateJointValue(robot.id, 5, 90)}>
                         열기
                       </Button>
                     </div>

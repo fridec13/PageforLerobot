@@ -142,9 +142,6 @@ function LoginForm({ returnUrl }: { returnUrl: string }) {
             </Link>
           </div>
           
-          <div className="text-center text-xs text-muted-foreground">
-            테스트 계정: admin@robossafyens.com / 1234
-          </div>
         </CardFooter>
       </Card>
     </div>

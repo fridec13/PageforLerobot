@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { ChevronLeft, Star, Award, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,8 @@ import { Badge } from "@/components/ui/badge"
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { useAuth } from "@/lib/auth"
+import guestbookService, { GuestbookEntry } from '@/lib/services/guestbookService'
+import leaderboardService, { Contributor } from '@/lib/services/leaderboardService'
 
 // 사이트 제작자 데이터
 const creators = [
@@ -21,25 +23,33 @@ const creators = [
     name: "김성훈",
     role: "프론트엔드 개발, DB 연동, wiki, docs, forum, robocon 페이지 개발, 배포, 로봇 모델 학습, 하드웨어 담당",
     image: "https://api.dicebear.com/7.x/lorelei/svg?seed=dev1",
-    github: "https://github.com/username1"
+    github: "https://github.com/fridec13"
   },
   {
-    name: "이름2",
-    role: "백엔드 개발",
+    name: "권우현",
+    role: "하드웨어 담당, 로봇 학습 디렉팅, 르로봇 코드 분석, 태스크 구현",
     image: "https://api.dicebear.com/7.x/lorelei/svg?seed=dev2",
-    github: "https://github.com/username2"
+    huggingface: "https://huggingface.co/woohyunwoo"
   },
   {
-    name: "이름3",
-    role: "UI/UX 디자인",
+    name: "손재민",
+    role: "하드웨어 조립, 젠킨스 테스트, 영상포트폴리오 제작작, JWT 테스트 개발발",
     image: "https://api.dicebear.com/7.x/lorelei/svg?seed=dev3",
-    github: "https://github.com/username3"
   },
   {
-    name: "이름4",
-    role: "백엔드 개발",
+    name: "윤상묵",
+    role: "백엔드 커뮤니티 테스트트 개발",
     image: "https://api.dicebear.com/7.x/lorelei/svg?seed=dev4",
-    github: "https://github.com/username4"
+  },
+  {
+    name: "허재웅",
+    role: "지식 공유 및 GPU 서버 관리",
+    image: "https://api.dicebear.com/7.x/lorelei/svg?seed=dev5",
+  },
+  {
+    name: "박수연",
+    role: "하드웨어 환경 조성",
+    image: "https://api.dicebear.com/7.x/lorelei/svg?seed=dev6",
   }
 ];
 
@@ -108,27 +118,87 @@ const initialGuestbook = [
 export default function CreditsPage() {
   const { user, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState("creators");
-  const [guestbook, setGuestbook] = useState(initialGuestbook);
+  const [guestbook, setGuestbook] = useState<GuestbookEntry[]>([]);
+  const [contributors, setContributors] = useState<Contributor[]>([]);
+  const [loading, setLoading] = useState({
+    guestbook: false,
+    contributors: false
+  });
   const [newMessage, setNewMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // 초기 데이터 로딩
+  useEffect(() => {
+    // 방명록 데이터 로딩
+    const loadGuestbook = async () => {
+      setLoading(prev => ({ ...prev, guestbook: true }));
+      try {
+        // 백엔드 연결이 준비되면 실제 API 호출로 변경
+        // const response = await guestbookService.getEntries();
+        // setGuestbook(response.entries);
+        
+        // 임시 데이터 사용
+        const mockEntries = guestbookService.getMockEntries();
+        setGuestbook(mockEntries);
+      } catch (error) {
+        console.error('방명록 로딩 오류:', error);
+      } finally {
+        setLoading(prev => ({ ...prev, guestbook: false }));
+      }
+    };
+    
+    // 리더보드 데이터 로딩
+    const loadContributors = async () => {
+      setLoading(prev => ({ ...prev, contributors: true }));
+      try {
+        // 백엔드 연결이 준비되면 실제 API 호출로 변경
+        // const response = await leaderboardService.getContributors();
+        // setContributors(response.contributors);
+        
+        // 임시 데이터 사용
+        const mockContributors = leaderboardService.getMockContributors();
+        setContributors(mockContributors);
+      } catch (error) {
+        console.error('기여자 로딩 오류:', error);
+      } finally {
+        setLoading(prev => ({ ...prev, contributors: false }));
+      }
+    };
+    
+    // 탭에 따라 필요한 데이터만 로딩
+    if (activeTab === 'guestbook') {
+      loadGuestbook();
+    } else if (activeTab === 'contributors') {
+      loadContributors();
+    }
+  }, [activeTab]);
+
   // 방명록 작성 처리
-  const handleSubmitMessage = () => {
+  const handleSubmitMessage = async () => {
     if (!newMessage.trim() || isSubmitting) return;
     
     setIsSubmitting(true);
     
-    // 새 메시지 추가
-    const newEntry = {
-      id: Date.now().toString(),
-      name: user?.name || "익명",
-      content: newMessage,
-      date: new Date()
-    };
-    
-    setGuestbook([newEntry, ...guestbook]);
-    setNewMessage("");
-    setIsSubmitting(false);
+    try {
+      // 백엔드 연결이 준비되면 실제 API 호출로 변경
+      // const newEntry = await guestbookService.createEntry({ content: newMessage });
+      
+      // 임시 데이터 생성
+      const newEntry: GuestbookEntry = {
+        id: Date.now().toString(),
+        name: user?.name || "익명",
+        content: newMessage,
+        date: new Date()
+      };
+      
+      setGuestbook([newEntry, ...guestbook]);
+      setNewMessage("");
+    } catch (error) {
+      console.error('방명록 작성 오류:', error);
+      alert('방명록 작성 중 문제가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -179,14 +249,26 @@ export default function CreditsPage() {
                     </Avatar>
                     <h3 className="font-bold text-lg">{creator.name}</h3>
                     <p className="text-sm text-muted-foreground mb-3">{creator.role}</p>
-                    <Link 
-                      href={creator.github} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-500 hover:underline flex items-center"
-                    >
-                      GitHub 프로필
-                    </Link>
+                    {creator.github && (
+                      <Link 
+                        href={creator.github} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-500 hover:underline flex items-center"
+                      >
+                        GitHub 프로필
+                      </Link>
+                    )}
+                    {creator.huggingface && (
+                      <Link 
+                        href={creator.huggingface} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-500 hover:underline flex items-center"
+                      >
+                        HuggingFace 프로필
+                      </Link>
+                    )}
                   </div>
                 ))}
               </div>
@@ -202,30 +284,39 @@ export default function CreditsPage() {
               <CardDescription>RoboSSAFYens에 많은 기여를 한 사용자들입니다.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {contributors.map((contributor, index) => (
-                  <div key={index} className="flex items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                    <div className="relative">
-                      <Avatar className="h-16 w-16">
-                        <AvatarImage src={contributor.image} alt={contributor.name} />
-                        <AvatarFallback>{contributor.name.substring(0, 2)}</AvatarFallback>
-                      </Avatar>
-                      <div className="absolute -top-2 -right-2 bg-yellow-400 rounded-full h-6 w-6 flex items-center justify-center border-2 border-white">
-                        <span className="text-xs font-bold">{index + 1}</span>
-                      </div>
-                    </div>
-                    <div className="ml-4 flex-grow">
-                      <div className="flex items-center">
-                        <h3 className="font-bold">{contributor.name}</h3>
-                        <Badge className="ml-2 bg-blue-100 text-blue-800">{contributor.level}</Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        <span className="font-medium text-blue-600">{contributor.contributions}</span> 기여
-                      </p>
-                    </div>
+              {loading.contributors ? (
+                <div className="flex justify-center py-8">
+                  <div className="text-center">
+                    <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-2"></div>
+                    <p className="text-sm text-muted-foreground">기여자 정보를 불러오는 중...</p>
                   </div>
-                ))}
-              </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {contributors.map((contributor, index) => (
+                    <div key={contributor.id} className="flex items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                      <div className="relative">
+                        <Avatar className="h-16 w-16">
+                          <AvatarImage src={contributor.avatar} alt={contributor.name} />
+                          <AvatarFallback>{contributor.name.substring(0, 2)}</AvatarFallback>
+                        </Avatar>
+                        <div className="absolute -top-2 -right-2 bg-yellow-400 rounded-full h-6 w-6 flex items-center justify-center border-2 border-white">
+                          <span className="text-xs font-bold">{index + 1}</span>
+                        </div>
+                      </div>
+                      <div className="ml-4 flex-grow">
+                        <div className="flex items-center">
+                          <h3 className="font-bold">{contributor.name}</h3>
+                          <Badge className="ml-2 bg-blue-100 text-blue-800">{contributor.level}</Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          <span className="font-medium text-blue-600">{contributor.contributions}</span> 기여
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -245,7 +336,7 @@ export default function CreditsPage() {
                   className="mb-2 min-h-[100px]"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  disabled={!isAuthenticated}
+                  disabled={!isAuthenticated || isSubmitting}
                 />
                 <div className="flex justify-end">
                   {isAuthenticated ? (
@@ -253,7 +344,7 @@ export default function CreditsPage() {
                       onClick={handleSubmitMessage} 
                       disabled={!newMessage.trim() || isSubmitting}
                     >
-                      작성하기
+                      {isSubmitting ? '작성 중...' : '작성하기'}
                     </Button>
                   ) : (
                     <Button variant="outline" asChild>
@@ -266,19 +357,32 @@ export default function CreditsPage() {
               <Separator className="my-6" />
               
               {/* 방명록 목록 */}
-              <div className="space-y-4">
-                {guestbook.map((entry) => (
-                  <div key={entry.id} className="p-4 border rounded-lg">
-                    <div className="flex justify-between items-center mb-2">
-                      <h3 className="font-medium">{entry.name}</h3>
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(entry.date), 'yyyy년 MM월 dd일', { locale: ko })}
-                      </span>
-                    </div>
-                    <p className="text-sm">{entry.content}</p>
+              {loading.guestbook ? (
+                <div className="flex justify-center py-8">
+                  <div className="text-center">
+                    <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-2"></div>
+                    <p className="text-sm text-muted-foreground">방명록을 불러오는 중...</p>
                   </div>
-                ))}
-              </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {guestbook.length === 0 ? (
+                    <p className="text-center py-8 text-muted-foreground">아직 방명록이 없습니다. 첫 번째 방명록을 작성해보세요!</p>
+                  ) : (
+                    guestbook.map((entry) => (
+                      <div key={entry.id} className="p-4 border rounded-lg">
+                        <div className="flex justify-between items-center mb-2">
+                          <h3 className="font-medium">{entry.name}</h3>
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(entry.date), 'yyyy년 MM월 dd일', { locale: ko })}
+                          </span>
+                        </div>
+                        <p className="text-sm">{entry.content}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
