@@ -51,13 +51,13 @@ const GuestbookController = {
         userId
       });
       
-      // 사용자 정보 가공
+      // 사용자 정보 가공 - 익명 사용자 경우 처리
       const formattedEntry = {
         id: newEntry.id,
         content: newEntry.content,
         date: newEntry.createdAt,
-        name: userId ? newEntry.user.name : '익명',
-        userImage: userId ? newEntry.user.image : null
+        name: userId && newEntry.user ? newEntry.user.name : '익명',
+        userImage: userId && newEntry.user ? newEntry.user.image : null
       };
       
       res.status(201).json(formattedEntry);
