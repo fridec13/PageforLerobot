@@ -207,6 +207,12 @@ export default function TrainingPage() {
 
   return (
     <div className="container mx-auto py-6">
+      <div className="mb-4 text-sm">
+        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-700">
+          <p><strong>정보:</strong> 아직 구현중인 기능입니다.</p>
+        </div>
+      </div>
+      
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">로봇 학습</h1>
         <div className="flex gap-2">
