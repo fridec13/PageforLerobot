@@ -1,65 +1,72 @@
 const express = require('express');
 const router = express.Router();
+const { authenticateJWT } = require('../middlewares/authMiddleware');
+const optionalAuth = require('../middlewares/optionalAuthmiddleware');
 const forumController = require('../controllers/forumController');
-const { authMiddleware } = require('../middlewares/authMiddleware');
-const { optionalAuth } = require('../middlewares/optionalAuthmiddleware');
 
 /**
  * Topics 관련 라우트
  */
 router.get('/topics', optionalAuth, forumController.getTopics);
-router.get('/topics/:slug', optionalAuth, forumController.getTopicDetail);
-router.post('/topics/:id/follow', authMiddleware, forumController.followTopic);
-router.delete('/topics/:id/follow', authMiddleware, forumController.unfollowTopic);
+router.get('/topics/:id', optionalAuth, forumController.getTopicById);
+router.get('/topics/:id/posts', optionalAuth, forumController.getPostsByTopic);
+router.post('/topics/:id/follow', authenticateJWT, forumController.followTopic);
+router.delete('/topics/:id/follow', authenticateJWT, forumController.unfollowTopic);
+
+/**
+ * Tags 관련 라우트
+ */
+router.get('/tags', optionalAuth, forumController.getTags);
+router.get('/tags/:slug/posts', optionalAuth, forumController.getPostsByTag);
 
 /**
  * Posts 관련 라우트
  */
 router.get('/posts', optionalAuth, forumController.getPosts);
-router.get('/topics/:slug/posts', optionalAuth, forumController.getPostsByTopic);
-router.get('/posts/:id', optionalAuth, forumController.getPostDetail);
-router.post('/posts', authMiddleware, forumController.createPost);
-router.put('/posts/:id', authMiddleware, forumController.updatePost);
-router.delete('/posts/:id', authMiddleware, forumController.deletePost);
-router.post('/posts/:id/like', authMiddleware, forumController.likePost);
-router.delete('/posts/:id/like', authMiddleware, forumController.unlikePost);
+router.get('/posts/:id', optionalAuth, forumController.getPostById);
+router.post('/posts', authenticateJWT, forumController.createPost);
+router.put('/posts/:id', authenticateJWT, forumController.updatePost);
+router.delete('/posts/:id', authenticateJWT, forumController.deletePost);
+router.post('/posts/:id/like', authenticateJWT, forumController.likePost);
+router.delete('/posts/:id/like', authenticateJWT, forumController.unlikePost);
 
 /**
  * Comments 관련 라우트
  */
 router.get('/posts/:postId/comments', optionalAuth, forumController.getComments);
-router.post('/posts/:postId/comments', authMiddleware, forumController.createComment);
-router.put('/posts/:postId/comments/:commentId', authMiddleware, forumController.updateComment);
-router.delete('/posts/:postId/comments/:commentId', authMiddleware, forumController.deleteComment);
-router.post('/posts/:postId/comments/:commentId/like', authMiddleware, forumController.likeComment);
-router.delete('/posts/:postId/comments/:commentId/like', authMiddleware, forumController.unlikeComment);
+router.get('/comments/:commentId/replies', optionalAuth, forumController.getReplies);
+router.post('/posts/:postId/comments', authenticateJWT, forumController.createComment);
+router.put('/posts/:postId/comments/:commentId', authenticateJWT, forumController.updateComment);
+router.delete('/posts/:postId/comments/:commentId', authenticateJWT, forumController.deleteComment);
+router.post('/posts/:postId/comments/:commentId/like', authenticateJWT, forumController.likeComment);
+router.delete('/posts/:postId/comments/:commentId/like', authenticateJWT, forumController.unlikeComment);
 
 /**
  * Users 관련 라우트
  */
-router.get('/users', optionalAuth, forumController.getUsers);
-router.get('/users/:username', optionalAuth, forumController.getUserDetail);
+router.get('/users/:username', optionalAuth, forumController.getUserProfile);
 router.get('/users/:username/posts', optionalAuth, forumController.getUserPosts);
-router.get('/users/:username/comments', optionalAuth, forumController.getUserComments);
-router.post('/users/:username/follow', authMiddleware, forumController.followUser);
-router.delete('/users/:username/follow', authMiddleware, forumController.unfollowUser);
+router.get('/users/:username/following', optionalAuth, forumController.getUserFollowing);
+router.get('/users/:username/followers', optionalAuth, forumController.getUserFollowers);
+router.post('/users/:username/follow', authenticateJWT, forumController.followUser);
+router.delete('/users/:username/follow', authenticateJWT, forumController.unfollowUser);
 
 /**
  * Badges 관련 라우트
  */
 router.get('/badges', optionalAuth, forumController.getBadges);
-router.get('/badges/:id', optionalAuth, forumController.getBadgeDetail);
-router.get('/badges/:id/users', optionalAuth, forumController.getBadgeUsers);
+router.get('/badges/categories', optionalAuth, forumController.getBadgeCategories);
+router.get('/users/:username/badges', optionalAuth, forumController.getUserBadges);
 
 /**
  * Groups 관련 라우트
  */
 router.get('/groups', optionalAuth, forumController.getGroups);
-router.get('/groups/:slug', optionalAuth, forumController.getGroupDetail);
+router.get('/groups/:slug', optionalAuth, forumController.getGroupBySlug);
 router.get('/groups/:slug/posts', optionalAuth, forumController.getGroupPosts);
 router.get('/groups/:slug/members', optionalAuth, forumController.getGroupMembers);
-router.post('/groups/:slug/join', authMiddleware, forumController.joinGroup);
-router.delete('/groups/:slug/leave', authMiddleware, forumController.leaveGroup);
+router.post('/groups/:slug/join', authenticateJWT, forumController.joinGroup);
+router.delete('/groups/:slug/leave', authenticateJWT, forumController.leaveGroup);
 
 /**
  * Search 관련 라우트

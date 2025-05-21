@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const GuestbookController = require('../controllers/guestbookController');
-const authMiddleware = require('../middlewares/authMiddleware');
+const { authenticateJWT } = require('../middlewares/authMiddleware');
 const optionalAuth = require('../middlewares/optionalAuthmiddleware');
 
 /**
@@ -16,9 +16,9 @@ router.get('/', optionalAuth, GuestbookController.getEntries);
 router.post('/', optionalAuth, GuestbookController.createEntry);
 
 // 방명록 삭제 (인증 필수 - 본인 작성 또는 관리자만 가능)
-router.delete('/:id', authMiddleware, GuestbookController.deleteEntry);
+router.delete('/:id', authenticateJWT, GuestbookController.deleteEntry);
 
 // 방명록 승인 상태 변경 (관리자 전용)
-router.patch('/:id/approval', authMiddleware, GuestbookController.updateApproval);
+router.patch('/:id/approval', authenticateJWT, GuestbookController.updateApproval);
 
 module.exports = router; 
