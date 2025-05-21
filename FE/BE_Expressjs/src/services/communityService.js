@@ -221,7 +221,7 @@ class CommunityService {
         content,
         category,
         author: {
-          connect: { id: Number(userId) },
+          connect: { id: userId },
         },
       },
       include: {

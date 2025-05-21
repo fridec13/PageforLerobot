@@ -13,16 +13,9 @@ router.post('/topics/:id/follow', authenticateJWT, forumController.followTopic);
 router.delete('/topics/:id/follow', authenticateJWT, forumController.unfollowTopic);
 
 /**
- * Tags 관련 라우트
- */
-router.get('/tags', optionalAuth, forumController.getTags);
-router.get('/tags/:slug/posts', optionalAuth, forumController.getPostsByTag);
-
-/**
  * Posts 관련 라우트
  */
 router.get('/posts', optionalAuth, forumController.getPosts);
-router.get('/topics/:slug/posts', optionalAuth, forumController.getPostsByTopic);
 router.get('/posts/:id', optionalAuth, forumController.getPostDetail);
 router.post('/posts', authenticateJWT, forumController.createPost);
 router.put('/posts/:id', authenticateJWT, forumController.updatePost);
