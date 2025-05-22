@@ -1,0 +1,637 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String             @id @default(uuid())
+  name               String
+  email              String             @unique
+  password           String
+  role               Role               @default(USER)
+  title              String?            @default("새싹")
+  image              String?
+  contribution       Int                @default(0)
+  lastLoginAt        DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  contributions      Contribution[]
+  sentMessages       Message[]          @relation("SentMessages")
+  receivedMessages   Message[]          @relation("ReceivedMessages")
+  userBadges         UserBadge[]
+  createdDocuments   WikiDocument[]     @relation("DocumentCreator")
+  modifiedDocuments  WikiDocument[]     @relation("DocumentModifier")
+  wikiRevisions      WikiRevision[]
+  wikiDiscussions    WikiDiscussion[]
+  wikiComments       WikiComment[]
+  userContributions  UserContribution[]
+  createdDocs        Document[]         @relation("DocCreator")
+  modifiedDocs       Document[]         @relation("DocModifier")
+  docHistories       DocumentHistory[]  @relation("DocHistoryEditor")
+  docChangeRequests  DocumentChangeRequest[] @relation("DocChangeRequestProposer")
+  reviewedRequests   DocumentChangeRequest[] @relation("DocChangeRequestReviewer")
+  guestbooks         Guestbook[]        // 사용자가 작성한 방명록
+  
+  // 추가 필드 - 리더보드 표시에 필요
+  username           String?            @unique // 사용자명 (닉네임)
+  
+  // 기여도 레벨 관계 추가
+  levelId            String?            @map("level_id")
+  level              Level?             @relation(fields: [levelId], references: [id])
+
+  // Community relations
+  posts         Post[]
+  comments      Comment[]
+  postLikes     PostLike[]
+  commentLikes  CommentLike[]
+
+  // Forum relations
+  forumPosts        ForumPost[]
+  forumComments     ForumComment[]
+  forumPostLikes    ForumPostLike[]
+  forumCommentLikes ForumCommentLike[]
+  topicsFollowed    TopicFollower[]
+  groupMemberships  GroupMember[]
+  followers         UserFollower[]    @relation("UserFollowing")
+  following         UserFollower[]    @relation("UserFollowers")
+  forumBadges       UserForumBadge[]
+}
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+// Contribution 모델 확장 - ContributionType enum 추가
+enum ContributionType {
+  WIKI_EDIT
+  WIKI_CREATE
+  DOC_EDIT
+  DOC_CREATE
+  FORUM_POST
+  FORUM_COMMENT
+  CODE_COMMIT
+  BUG_REPORT
+  OTHER
+}
+
+model Contribution {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  type        String   // 기여 타입 (wiki, forum, docs 등)
+  description String
+  points      Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // 다양한 기여 유형 추가
+  contributionType ContributionType? // 기존 type 필드와 함께 사용
+  targetId         String?           // 관련된 문서, 위키, 댓글 등의 ID
+  targetUrl        String?           // 기여한 내용의 URL
+}
+
+model Message {
+  id         String    @id @default(uuid())
+  senderId   String
+  receiverId String
+  content    String
+  read       Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  readAt     DateTime?
+  sender     User      @relation("SentMessages", fields: [senderId], references: [id])
+  receiver   User      @relation("ReceivedMessages", fields: [receiverId], references: [id])
+}
+
+model Badge {
+  id          String      @id @default(uuid())
+  name        String      @unique
+  description String
+  image       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  userBadges  UserBadge[]
+}
+
+model UserBadge {
+  id        String   @id @default(uuid())
+  userId    String
+  badgeId   String
+  user      User     @relation(fields: [userId], references: [id])
+  badge     Badge    @relation(fields: [badgeId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, badgeId])
+}
+
+// 위키 문서 모델
+model WikiDocument {
+  id             String           @id @default(uuid())
+  slug           String           @unique
+  title          String
+  content        String           @db.Text
+  isPublished    Boolean          @default(true)
+  viewCount      Int              @default(0)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  createdById    String
+  lastModifiedById String
+  createdBy      User             @relation("DocumentCreator", fields: [createdById], references: [id])
+  lastModifiedBy User             @relation("DocumentModifier", fields: [lastModifiedById], references: [id])
+  categories     WikiCategory[]   @relation("DocumentToCategory")
+  revisions      WikiRevision[]
+  discussions    WikiDiscussion[]
+  contributions  UserContribution[]
+}
+
+// 위키 카테고리 모델
+model WikiCategory {
+  id          String         @id @default(uuid())
+  name        String
+  slug        String         @unique
+  description String?
+  parentId    String?
+  parent      WikiCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    WikiCategory[] @relation("CategoryHierarchy")
+  documents   WikiDocument[] @relation("DocumentToCategory")
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+// 위키 문서 수정 이력 모델
+model WikiRevision {
+  id         String       @id @default(uuid())
+  documentId String
+  content    String       @db.Text
+  diff       String?      @db.Text
+  comment    String
+  createdAt  DateTime     @default(now())
+  createdById String
+  document   WikiDocument @relation(fields: [documentId], references: [id])
+  createdBy  User         @relation(fields: [createdById], references: [id])
+}
+
+// 위키 문서 토론 모델
+model WikiDiscussion {
+  id         String        @id @default(uuid())
+  documentId String
+  title      String
+  status     String        @default("open") // open, closed, resolved
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  createdById String
+  document   WikiDocument  @relation(fields: [documentId], references: [id])
+  createdBy  User          @relation(fields: [createdById], references: [id])
+  comments   WikiComment[]
+}
+
+// 위키 토론 댓글 모델
+model WikiComment {
+  id           String        @id @default(uuid())
+  discussionId String
+  content      String        @db.Text
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  createdById  String
+  discussion   WikiDiscussion @relation(fields: [discussionId], references: [id])
+  createdBy    User          @relation(fields: [createdById], references: [id])
+}
+
+// 사용자 기여 내역 모델
+model UserContribution {
+  id          String       @id @default(uuid())
+  userId      String
+  type        String       // WIKI, DOCUMENT, FORUM
+  title       String
+  documentId  String?
+  document    WikiDocument? @relation(fields: [documentId], references: [id])
+  createdAt   DateTime     @default(now())
+  user        User         @relation(fields: [userId], references: [id])
+}
+
+//---------------- 새로 추가하는 Docs 모델 ----------------//
+
+// 기술 문서 모델
+model Document {
+  id                String    @id @default(uuid())
+  title             String
+  content           String    @db.Text
+  path              String    @unique
+  isPublished       Boolean   @default(true)
+  version           Int       @default(1)
+  views             Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  categoryId        String
+  createdById       String
+  lastModifiedById  String
+  tags              String[]  @default([])
+
+  // 외래 키 관계
+  category          Category  @relation(fields: [categoryId], references: [id])
+  createdBy         User      @relation("DocCreator", fields: [createdById], references: [id])
+  lastModifiedBy    User      @relation("DocModifier", fields: [lastModifiedById], references: [id])
+  
+  // 관련 컬렉션
+  history           DocumentHistory[]
+  changeRequests    DocumentChangeRequest[]
+}
+
+// 문서 카테고리 모델
+model Category {
+  id          String    @id @default(uuid())
+  name        String
+  path        String    @unique
+  description String?
+  parentId    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // 외래 키 관계
+  parent      Category? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+  documents   Document[]
+}
+
+// 문서 이력 모델
+model DocumentHistory {
+  id                String    @id @default(uuid())
+  content           String    @db.Text
+  version           Int
+  changeDescription String?
+  createdAt         DateTime  @default(now())
+  documentId        String
+  editedById        String
+
+  // 외래 키 관계
+  document          Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  editedBy          User      @relation("DocHistoryEditor", fields: [editedById], references: [id])
+}
+
+// 문서 변경 요청 모델
+model DocumentChangeRequest {
+  id              String    @id @default(uuid())
+  proposedContent String    @db.Text
+  status          String    // pending, approved, rejected
+  reviewComment   String?
+  reason          String?   @db.Text
+  createdAt       DateTime  @default(now())
+  reviewedAt      DateTime?
+  documentId      String
+  proposedById    String
+  reviewedById    String?
+
+  // 외래 키 관계
+  document        Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  proposedBy      User      @relation("DocChangeRequestProposer", fields: [proposedById], references: [id])
+  reviewedBy      User?     @relation("DocChangeRequestReviewer", fields: [reviewedById], references: [id])
+}
+
+//---------------- 방명록 & 리더보드 관련 모델 추가 ----------------//
+
+// 방명록 모델
+model Guestbook {
+  id          String   @id @default(uuid())
+  content     String   @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // 사용자 관계 (null 허용 - 익명 작성 가능)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  // 관리자 승인 여부 (기본값 true, 스팸 방지를 위해 필요시 false로 설정)
+  isApproved  Boolean  @default(true)
+  
+  @@map("guestbooks")
+}
+
+// 사용자 레벨 모델 (기여도에 따른 등급)
+model Level {
+  id            String   @id @default(uuid())
+  name          String   @unique // Regular, Advanced, Master, Expert, Researcher, Sapiens 등
+  description   String?
+  minPoints     Int      // 이 등급에 필요한 최소 포인트
+  maxPoints     Int?     // 이 등급의 최대 포인트 (선택적)
+  imageUrl      String?  // 레벨 배지 이미지 URL
+  color         String?  // 레벨 표시 색상 코드
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // 관계
+  users         User[]   // 해당 레벨에 속한 사용자들
+  
+  @@map("levels")
+}
+
+// Community Models
+model Post {
+  id            Int       @id @default(autoincrement())
+  title         String    @db.VarChar(255)
+  content       String    @db.Text
+  category      String    @db.VarChar(50)
+  authorId      String
+  author        User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  viewCount     Int       @default(0)
+  likeCount     Int       @default(0)
+  commentCount  Int       @default(0)
+  
+  comments      Comment[]
+  likes         PostLike[]
+
+  @@index([authorId])
+  @@index([category])
+  @@index([createdAt])
+}
+
+model Comment {
+  id            Int       @id @default(autoincrement())
+  content       String    @db.Text
+  authorId      String
+  author        User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  postId        Int
+  post          Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  likeCount     Int       @default(0)
+
+  likes         CommentLike[]
+
+  @@index([authorId])
+  @@index([postId])
+  @@index([createdAt])
+}
+
+model PostLike {
+  id            Int       @id @default(autoincrement())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId        Int
+  post          Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+
+  @@unique([userId, postId])
+  @@index([userId])
+  @@index([postId])
+}
+
+model CommentLike {
+  id            Int       @id @default(autoincrement())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  commentId     Int
+  comment       Comment   @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+
+  @@unique([userId, commentId])
+  @@index([userId])
+  @@index([commentId])
+}
+
+// Forum Models
+model Topic {
+  id              Int         @id @default(autoincrement())
+  title           String      @db.VarChar(100)
+  description     String      @db.Text
+  slug            String      @unique
+  postCount       Int         @default(0)
+  followersCount  Int         @default(0)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Relations
+  posts           ForumPost[]
+  followers       TopicFollower[]
+
+  @@index([slug])
+  @@map("forum_topics")
+}
+
+model ForumPost {
+  id              Int         @id @default(autoincrement())
+  title           String      @db.VarChar(255)
+  content         String      @db.Text
+  topicId         Int
+  authorId        String
+  groupId         Int?
+  likeCount       Int         @default(0)
+  commentCount    Int         @default(0)
+  viewCount       Int         @default(0)
+  isPinned        Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Relations
+  topic           Topic       @relation(fields: [topicId], references: [id])
+  author          User        @relation(fields: [authorId], references: [id])
+  group           ForumGroup? @relation(fields: [groupId], references: [id])
+  comments        ForumComment[]
+  likes           ForumPostLike[]
+  tags            ForumPostTag[]
+
+  @@index([authorId])
+  @@index([topicId])
+  @@index([groupId])
+  @@index([createdAt])
+  @@map("forum_posts")
+}
+
+model ForumComment {
+  id              Int         @id @default(autoincrement())
+  content         String      @db.Text
+  postId          Int
+  authorId        String
+  parentId        Int?
+  likeCount       Int         @default(0)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Relations
+  post            ForumPost   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author          User        @relation(fields: [authorId], references: [id])
+  parent          ForumComment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies         ForumComment[] @relation("CommentReplies")
+  likes           ForumCommentLike[]
+
+  @@index([postId])
+  @@index([authorId])
+  @@index([parentId])
+  @@index([createdAt])
+  @@map("forum_comments")
+}
+
+model ForumTag {
+  id              Int         @id @default(autoincrement())
+  name            String      @unique
+  slug            String      @unique
+  description     String?     @db.Text
+  createdAt       DateTime    @default(now())
+  
+  // Relations
+  posts           ForumPostTag[]
+
+  @@index([slug])
+  @@map("forum_tags")
+}
+
+model ForumPostTag {
+  postId          Int
+  tagId           Int
+  
+  // Relations
+  post            ForumPost   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag             ForumTag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@map("forum_post_tags")
+}
+
+model ForumPostLike {
+  id              Int         @id @default(autoincrement())
+  postId          Int
+  userId          String
+  createdAt       DateTime    @default(now())
+  
+  // Relations
+  post            ForumPost   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user            User        @relation(fields: [userId], references: [id])
+
+  @@unique([postId, userId])
+  @@index([userId])
+  @@map("forum_post_likes")
+}
+
+model ForumCommentLike {
+  id              Int         @id @default(autoincrement())
+  commentId       Int
+  userId          String
+  createdAt       DateTime    @default(now())
+  
+  // Relations
+  comment         ForumComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user            User        @relation(fields: [userId], references: [id])
+
+  @@unique([commentId, userId])
+  @@index([userId])
+  @@map("forum_comment_likes")
+}
+
+model ForumGroup {
+  id              Int         @id @default(autoincrement())
+  name            String      @db.VarChar(100)
+  description     String      @db.Text
+  slug            String      @unique
+  memberCount     Int         @default(0)
+  isPrivate       Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Relations
+  posts           ForumPost[]
+  members         GroupMember[]
+
+  @@index([slug])
+  @@map("forum_groups")
+}
+
+model GroupMember {
+  id              Int         @id @default(autoincrement())
+  groupId         Int
+  userId          String
+  role            String      @default("member") // member, moderator, admin
+  joinedAt        DateTime    @default(now())
+  
+  // Relations
+  group           ForumGroup  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user            User        @relation(fields: [userId], references: [id])
+
+  @@unique([groupId, userId])
+  @@index([userId])
+  @@map("forum_group_members")
+}
+
+model TopicFollower {
+  id              Int         @id @default(autoincrement())
+  topicId         Int
+  userId          String
+  followedAt      DateTime    @default(now())
+  
+  // Relations
+  topic           Topic       @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  user            User        @relation(fields: [userId], references: [id])
+
+  @@unique([topicId, userId])
+  @@index([userId])
+  @@map("forum_topic_followers")
+}
+
+model UserFollower {
+  id              Int         @id @default(autoincrement())
+  followerId      String
+  followingId     String
+  followedAt      DateTime    @default(now())
+  
+  // Relations
+  follower        User        @relation("UserFollowers", fields: [followerId], references: [id])
+  following       User        @relation("UserFollowing", fields: [followingId], references: [id])
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("forum_user_followers")
+}
+
+model ForumBadge {
+  id              Int         @id @default(autoincrement())
+  name            String      @unique
+  description     String      @db.Text
+  image           String?
+  criteria        String?     @db.Text
+  categoryId      Int?
+  createdAt       DateTime    @default(now())
+  
+  // Relations
+  users           UserForumBadge[]
+  category        ForumBadgeCategory? @relation(fields: [categoryId], references: [id])
+
+  @@map("forum_badges")
+}
+
+model ForumBadgeCategory {
+  id              Int         @id @default(autoincrement())
+  name            String      @unique
+  description     String?     @db.Text
+  
+  // Relations
+  badges          ForumBadge[]
+
+  @@map("forum_badge_categories")
+}
+
+model UserForumBadge {
+  id              Int         @id @default(autoincrement())
+  userId          String
+  badgeId         Int
+  awardedAt       DateTime    @default(now())
+  
+  // Relations
+  user            User        @relation(fields: [userId], references: [id])
+  badge           ForumBadge  @relation(fields: [badgeId], references: [id])
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+  @@map("forum_user_badges")
+}

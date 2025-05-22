@@ -1,0 +1,75 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# RoboSSAFYens 프로젝트 구조 가이드라인
+
+## 라우팅 구조 원칙
+
+- 같은 폴더 레벨에 동적 라우트와 일반 라우트가 공존할 수 없습니다.
+- 계층 구조는 최대 2단계로 제한합니다. (더 복잡한 구조는 중첩 폴더로 구성)
+- catch-all 라우트([...path])는 사용하지 않습니다. 일반 동적 라우트([id] 또는 [slug])를 사용하세요.
+- 모든 주요 기능(docs, wiki, auth 등)은 동일한 폴더 구조 패턴을 따라야 합니다.
+
+## 표준 폴더 구조
+
+### 페이지 구조
+각 기능 폴더는 다음 구조를 따릅니다:
+- `layout.tsx`: 공통 레이아웃
+- `page.tsx`: 메인 페이지 (목록)
+- `[id|slug]/`: 동적 라우트 (상세 페이지)
+  - `page.tsx`: 상세 페이지
+  - `edit/page.tsx`: 수정 페이지 (필요시)
+
+### API 라우트 구조
+- `app/api/[기능명]/route.ts`: 목록, 생성 API
+- `app/api/[기능명]/[id]/route.ts`: 상세, 수정, 삭제 API
+
+## 예시 구조
+
+### WIKI
+```
+app/wiki/
+├── layout.tsx      # 공통 레이아웃
+├── page.tsx        # 위키 목록
+└── [slug]/         # 개별 위키
+    ├── page.tsx    # 위키 상세
+    ├── edit/       # 위키 편집
+    │   └── page.tsx
+    ├── history/    # 위키 역사
+    │   └── page.tsx
+    └── discussion/ # 위키 토론
+        └── page.tsx
+```
+
+### DOCS
+```
+app/docs/
+├── layout.tsx     # 공통 레이아웃
+├── page.tsx       # 문서 목록
+└── [id]/          # 개별 문서
+    ├── page.tsx   # 문서 상세
+    └── edit/      # 문서 편집
+        └── page.tsx
+```
+
+### AUTH
+```
+app/auth/
+├── layout.tsx
+├── login/
+│   └── page.tsx
+└── register/
+    └── page.tsx
+```
+
+## 라우팅 변경 가이드
+
+현재 catch-all 라우트를 사용하는 코드는 다음과 같이 변경해야 합니다:
+
+1. `/docs/[...path]` → `/docs/[id]`
+2. `/api/docs/[...path]` → `/api/docs/[id]`
+3. `/docs-home` → `/docs`
+
+

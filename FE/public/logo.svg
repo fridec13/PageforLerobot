@@ -1,0 +1,36 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 로봇 머리 -->
+  <rect x="30" y="20" width="60" height="50" rx="10" fill="#3B82F6" />
+  
+  <!-- 로봇 눈 -->
+  <circle cx="45" cy="40" r="8" fill="white" />
+  <circle cx="75" cy="40" r="8" fill="white" />
+  <circle cx="45" cy="40" r="4" fill="#1E40AF" />
+  <circle cx="75" cy="40" r="4" fill="#1E40AF" />
+  
+  <!-- 로봇 입 -->
+  <rect x="45" y="55" width="30" height="5" rx="2.5" fill="white" />
+  
+  <!-- 안테나 -->
+  <rect x="57" y="10" width="6" height="10" fill="#3B82F6" />
+  <circle cx="60" cy="8" r="4" fill="#93C5FD" />
+  
+  <!-- 몸통 -->
+  <rect x="35" y="70" width="50" height="30" rx="5" fill="#60A5FA" />
+  
+  <!-- 버튼들 -->
+  <circle cx="45" cy="80" r="3" fill="#93C5FD" />
+  <circle cx="60" cy="80" r="3" fill="#93C5FD" />
+  <circle cx="75" cy="80" r="3" fill="#93C5FD" />
+  
+  <!-- 팔 -->
+  <rect x="20" y="75" width="15" height="6" rx="3" fill="#60A5FA" />
+  <rect x="85" y="75" width="15" height="6" rx="3" fill="#60A5FA" />
+  
+  <!-- 다리 -->
+  <rect x="43" y="100" width="10" height="15" rx="3" fill="#60A5FA" />
+  <rect x="67" y="100" width="10" height="15" rx="3" fill="#60A5FA" />
+  
+  <!-- SSAFYENS 텍스트 -->
+  <!-- <text x="60" y="115" font-family="Arial" font-size="8" fill="#1E40AF" text-anchor="middle" font-weight="bold">ROBOSSAFYENS</text> -->
+</svg> 

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>카메라 연결 테스트</title>
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #log {
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        .error {
+            color: #D8000C;
+        }
+        .success {
+            color: #4F8A10;
+        }
+        .info {
+            color: #31708f;
+        }
+    </style>
+</head>
+<body>
+    <h1>카메라 연결 테스트</h1>
+    
+    <div>
+        <button id="scanBtn">카메라 스캔</button>
+        <button id="testBtn">카메라 테스트</button>
+        <input type="number" id="cameraIndex" min="0" max="10" value="0" style="width: 50px;">
+        <span>(카메라 인덱스)</span>
+    </div>
+    
+    <div id="log"></div>
+    
+    <script>
+        // 웹소켓 연결
+        let socket = null;
+        const logElement = document.getElementById('log');
+        const scanBtn = document.getElementById('scanBtn');
+        const testBtn = document.getElementById('testBtn');
+        const cameraIndexInput = document.getElementById('cameraIndex');
+        
+        // 로그 출력 함수
+        function log(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.classList.add('log-entry', type);
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logElement.appendChild(entry);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        // 웹소켓 연결 설정
+        function setupWebSocket() {
+            // 이미 연결된 소켓이 있다면 닫기
+            if (socket && socket.readyState !== WebSocket.CLOSED) {
+                socket.close();
+            }
+            
+            log('웹소켓 연결 시도 중...');
+            
+            // 웹소켓 연결 (현재 호스트의 8080 포트)
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            socket = new WebSocket(`${wsProtocol}//${window.location.host}/ws`);
+            
+            socket.onopen = function() {
+                log('서버에 연결되었습니다.', 'success');
+                scanBtn.disabled = false;
+                testBtn.disabled = false;
+            };
+            
+            socket.onclose = function() {
+                log('서버 연결이 종료되었습니다.', 'error');
+                scanBtn.disabled = true;
+                testBtn.disabled = true;
+                
+                // 5초 후 재연결 시도
+                setTimeout(setupWebSocket, 5000);
+            };
+            
+            socket.onerror = function(error) {
+                log('웹소켓 오류: ' + error, 'error');
+            };
+            
+            socket.onmessage = function(event) {
+                // 서버로부터 메시지 수신
+                try {
+                    const message = JSON.parse(event.data);
+                    handleMessage(message);
+                } catch (error) {
+                    log('메시지 처리 오류: ' + error, 'error');
+                }
+            };
+        }
+        
+        // 서버 메시지 처리
+        function handleMessage(message) {
+            switch (message.type) {
+                case 'ports_list':
+                    log(`사용 가능한 포트 목록 (${message.ports.length}개):`);
+                    message.ports.forEach(port => {
+                        log(`- ${port.port}: ${port.description}`);
+                    });
+                    break;
+                    
+                case 'camera_connection_result':
+                    if (message.success) {
+                        log(`카메라 연결 성공: ${JSON.stringify(message.camera_info)}`, 'success');
+                    } else {
+                        log(`카메라 연결 실패: ${message.message}`, 'error');
+                    }
+                    break;
+                    
+                case 'error':
+                    log(`오류: ${message.message}`, 'error');
+                    break;
+                    
+                default:
+                    log(`수신된 메시지: ${JSON.stringify(message)}`);
+            }
+        }
+        
+        // 카메라 스캔 버튼 클릭 이벤트
+        scanBtn.addEventListener('click', function() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                log('카메라 스캔 요청 중...');
+                socket.send(JSON.stringify({
+                    type: 'scan_ports'
+                }));
+            } else {
+                log('서버에 연결되어 있지 않습니다.', 'error');
+            }
+        });
+        
+        // 카메라 테스트 버튼 클릭 이벤트
+        testBtn.addEventListener('click', function() {
+            const cameraIndex = parseInt(cameraIndexInput.value, 10);
+            
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                log(`카메라 ${cameraIndex} 테스트 요청 중...`);
+                socket.send(JSON.stringify({
+                    type: 'test_camera_connection',
+                    index: cameraIndex
+                }));
+            } else {
+                log('서버에 연결되어 있지 않습니다.', 'error');
+            }
+        });
+        
+        // 초기 설정
+        document.addEventListener('DOMContentLoaded', function() {
+            scanBtn.disabled = true;
+            testBtn.disabled = true;
+            setupWebSocket();
+        });
+    </script>
+</body>
+</html> 

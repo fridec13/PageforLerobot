@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>카메라 스트림 뷰어</title>
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .video-container {
+            flex: 1;
+            min-width: 640px;
+        }
+        .controls {
+            flex: 1;
+            padding: 20px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+        }
+        #videoElement {
+            width: 100%;
+            border-radius: 8px;
+            background-color: #000;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #log {
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            margin-top: 20px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        .error {
+            color: #D8000C;
+        }
+        .success {
+            color: #4F8A10;
+        }
+        .info {
+            color: #31708f;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .status.connected {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        .status.disconnected {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+    </style>
+</head>
+<body>
+    <h1>카메라 스트림 뷰어</h1>
+    
+    <div class="container">
+        <div class="video-container">
+            <video id="videoElement" autoplay></video>
+        </div>
+        
+        <div class="controls">
+            <h2>카메라 제어</h2>
+            <div>
+                <label for="cameraIndex">카메라 인덱스:</label>
+                <input type="number" id="cameraIndex" min="0" max="10" value="0" style="width: 50px;">
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <button id="startBtn">스트림 시작</button>
+                <button id="stopBtn" disabled>스트림 중지</button>
+            </div>
+            
+            <div id="status" class="status disconnected">
+                연결되지 않음
+            </div>
+            
+            <div id="log"></div>
+        </div>
+    </div>
+    
+    <script>
+        // 웹소켓 연결
+        let socket;
+        let mediaStream = null;
+        const videoElement = document.getElementById('videoElement');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const cameraIndexInput = document.getElementById('cameraIndex');
+        const statusElement = document.getElementById('status');
+        const logElement = document.getElementById('log');
+        
+        // 로그 출력 함수
+        function log(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.classList.add('log-entry', type);
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logElement.appendChild(entry);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        // 상태 업데이트 함수
+        function updateStatus(connected, message) {
+            statusElement.className = `status ${connected ? 'connected' : 'disconnected'}`;
+            statusElement.textContent = message;
+        }
+        
+        // 웹소켓 연결 설정
+        function setupWebSocket() {
+            log('웹소켓 연결 시도 중...');
+            
+            // 웹소켓 연결 (같은 호스트의 8080 포트)
+            socket = new WebSocket(`ws://${window.location.hostname}:8080/ws`);
+            
+            socket.onopen = function() {
+                log('서버에 연결되었습니다.', 'success');
+                updateStatus(true, '서버에 연결됨');
+                startBtn.disabled = false;
+            };
+            
+            socket.onclose = function() {
+                log('서버 연결이 종료되었습니다.', 'error');
+                updateStatus(false, '서버 연결 끊김');
+                startBtn.disabled = true;
+                stopBtn.disabled = true;
+                
+                // 5초 후 재연결 시도
+                setTimeout(setupWebSocket, 5000);
+            };
+            
+            socket.onerror = function(error) {
+                log('웹소켓 오류: ' + error, 'error');
+                updateStatus(false, '연결 오류');
+            };
+            
+            socket.onmessage = function(event) {
+                // 서버로부터 메시지 수신
+                try {
+                    const message = JSON.parse(event.data);
+                    handleMessage(message);
+                } catch (error) {
+                    log('메시지 처리 오류: ' + error, 'error');
+                }
+            };
+        }
+        
+        // 서버 메시지 처리
+        function handleMessage(message) {
+            switch (message.type) {
+                case 'camera_stream':
+                    // 카메라 스트림 데이터 처리
+                    if (message.image) {
+                        // Base64 이미지 데이터를 표시
+                        videoElement.src = `data:image/jpeg;base64,${message.image}`;
+                    }
+                    break;
+                    
+                case 'camera_connection_result':
+                    if (message.success) {
+                        log(`카메라 연결 성공: ${JSON.stringify(message.camera_info)}`, 'success');
+                        updateStatus(true, `카메라 ${cameraIndexInput.value} 연결됨`);
+                    } else {
+                        log(`카메라 연결 실패: ${message.message}`, 'error');
+                        updateStatus(false, `카메라 연결 실패: ${message.message}`);
+                        stopStream();
+                    }
+                    break;
+                    
+                case 'error':
+                    log(`오류: ${message.message}`, 'error');
+                    updateStatus(false, `오류: ${message.message}`);
+                    break;
+                    
+                default:
+                    log(`수신된 메시지: ${JSON.stringify(message)}`);
+            }
+        }
+        
+        // 스트림 시작
+        function startStream() {
+            const cameraIndex = parseInt(cameraIndexInput.value, 10);
+            
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                log(`카메라 ${cameraIndex} 스트림 시작 요청 중...`);
+                socket.send(JSON.stringify({
+                    type: 'start_camera_stream',
+                    index: cameraIndex
+                }));
+                
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                updateStatus(true, `카메라 ${cameraIndex} 스트림 시작 중...`);
+            } else {
+                log('서버에 연결되어 있지 않습니다.', 'error');
+                updateStatus(false, '서버 연결 없음');
+            }
+        }
+        
+        // 스트림 중지
+        function stopStream() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                log('카메라 스트림 중지 요청 중...');
+                socket.send(JSON.stringify({
+                    type: 'stop_camera_stream'
+                }));
+            }
+            
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            updateStatus(false, '스트림 중지됨');
+            
+            // 비디오 요소 초기화
+            videoElement.src = '';
+        }
+        
+        // 이벤트 리스너 설정
+        startBtn.addEventListener('click', startStream);
+        stopBtn.addEventListener('click', stopStream);
+        
+        // 초기 설정
+        document.addEventListener('DOMContentLoaded', function() {
+            startBtn.disabled = true;
+            stopBtn.disabled = true;
+            setupWebSocket();
+        });
+    </script>
+</body>
+</html> 
