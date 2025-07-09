@@ -1,7 +1,6 @@
 "use client"
 
 import { Header } from '@/components/layout/header'
-import { Sidebar } from '@/components/layout/sidebar'
 import { Providers } from './providers'
 import { useState } from 'react'
 
@@ -14,14 +13,11 @@ export function ClientLayout({
 
   return (
     <Providers>
-      <div className="flex flex-col h-screen overflow-hidden">
+      <div className="flex flex-col min-h-screen">
         <Header isMobileOpen={isMobileOpen} setIsMobileOpen={setIsMobileOpen} />
-        <div className="flex flex-1 overflow-hidden">
-          <Sidebar isMobileOpen={isMobileOpen} setIsMobileOpen={setIsMobileOpen} />
-          <main className="flex-1 overflow-y-auto p-3 md:p-4 lg:p-6">
-            {children}
-          </main>
-        </div>
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
       </div>
     </Providers>
   )

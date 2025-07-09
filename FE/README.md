@@ -1,107 +1,99 @@
-# RoboSSAFYens
+# Robot Offset Simulator
 
-로봇 학습용 기술문서와 위키 페이지, QNA 포럼 게시판, 자유게시판, 3D 로봇 모델 컨트롤러를 제공하는 다중 접속 커뮤니티 사이트입니다.
+3D 로봇 모델을 통한 오프셋 시뮬레이션 도구
 
-## 프로젝트 개요
+## 🤖 주요 기능
 
-- 로봇 관련 기술문서 및 위키 제공
-- 포럼 기반 QNA 시스템
-- 자유 게시판
-- 로봇 3D 모델 및 컨트롤러
-- 다국어 지원 (한국어, 영어)
+- **3D 로봇 시뮬레이션**: URDF 파일을 통한 실시간 로봇 모델 렌더링
+- **관절 제어**: 각 관절의 개별적인 각도 조정 및 오프셋 설정
+- **다중 로봇 지원**: 여러 로봇을 동시에 시뮬레이션
+- **STL 모델 뷰어**: 개별 STL 파일 로드 및 검사
+- **직관적인 UI**: 슬라이더를 통한 쉬운 조작
 
-## 기술 스택
+## 🛠️ 기술 스택
 
-- **프론트엔드**: Next.js, TypeScript, Tailwind CSS
-- **상태 관리**: Zustand
-- **API 통신**: Axios
-- **스타일링**: Shadcn UI
-- **3D 렌더링**: Three.js
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **3D 렌더링**: Three.js, React Three Fiber, React Three Drei
+- **로봇 모델**: URDF Loader, STL Loader
+- **UI 컴포넌트**: Radix UI, Tailwind CSS
+- **스타일링**: Tailwind CSS
 
-## 개발 환경 설정
+## 🚀 시작하기
 
-### 시스템 요구사항
-
-- Node.js 18.x 이상
-- pnpm 8.x 이상
-
-### 설치 및 실행 방법
-
-1. **저장소 클론**
+### 설치
 
 ```bash
-git clone https://github.com/your-username/robo-sapiens.git
-cd robo-sapiens
+npm install
 ```
 
-2. **의존성 설치**
+### 개발 서버 실행
 
 ```bash
-pnpm install
+npm run dev
 ```
 
-3. **개발 서버 실행**
+### 프로덕션 빌드
 
 ```bash
-pnpm dev
+npm run build
+npm start
 ```
 
-4. **빌드**
+## 📁 프로젝트 구조
+
+```
+├── app/                          # Next.js App Router
+│   ├── robocon/offsetsim/        # Offset Simulator 페이지
+│   │   ├── page.tsx              # 메인 시뮬레이터
+│   │   └── stlloaderpage.tsx     # STL 로더
+│   ├── layout.tsx                # 루트 레이아웃
+│   └── page.tsx                  # 홈 페이지
+├── components/                   # React 컴포넌트
+│   ├── layout/                   # 레이아웃 컴포넌트
+│   └── ui/                       # UI 컴포넌트
+├── lib/                          # 유틸리티 라이브러리
+│   ├── urdf-loader/              # URDF 로더 라이브러리
+│   └── utils.ts                  # 유틸리티 함수
+└── public/                       # 정적 파일
+    └── models/                   # 3D 모델 파일들
+```
+
+## 🎯 사용법
+
+1. 브라우저에서 `http://localhost:3000` 접속
+2. 자동으로 Offset Simulator로 리다이렉트
+3. 로봇 모델 추가/제거
+4. 슬라이더를 통해 관절 각도 조정
+5. 오프셋 값 설정 및 저장/불러오기
+
+## 📋 지원 모델
+
+- SO-100 5DOF 로봇 팔
+- 표준 URDF 형식 모델
+- STL 메시 파일
+
+## 🌐 배포
+
+### Vercel 배포
 
 ```bash
-pnpm build
+npm install -g vercel
+vercel
 ```
 
-5. **프로덕션 서버 실행**
+### Docker 배포
 
-```bash
-pnpm start
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+EXPOSE 3000
+CMD ["npm", "start"]
 ```
 
-### 환경 변수 설정
+## 📄 라이선스
 
-`.env.local` 파일을 루트 디렉토리에 생성하고 다음 변수를 설정하세요:
-
-```
-NEXT_PUBLIC_API_URL=http://localhost:8080/api
-```
-
-## 주요 명령어
-
-- `pnpm dev` - 개발 서버 실행 (http://localhost:3000)
-- `pnpm build` - 프로덕션용 빌드 생성
-- `pnpm start` - 프로덕션 서버 실행
-- `pnpm lint` - 코드 린팅
-- `pnpm test` - 테스트 실행 (설정된 경우)
-
-## 프로젝트 구조
-
-```
-robo-sapiens/
-├── app/              # Next.js 앱 디렉토리
-│   ├── auth/         # 인증 관련 페이지
-│   ├── docs/         # 기술 문서 페이지
-│   ├── forum/        # 포럼 페이지
-│   ├── profile/      # 사용자 프로필 페이지
-│   ├── robocon/      # 로봇 컨트롤러 페이지
-│   └── wiki/         # 위키 페이지
-├── components/       # 재사용 가능한 컴포넌트
-├── lib/              # 유틸리티, 서비스, 상태 관리
-│   ├── models/       # 데이터 모델
-│   ├── services/     # API 서비스
-│   └── store/        # Zustand 상태 관리
-├── public/           # 정적 파일
-└── hooks/            # 커스텀 훅
-```
-
-## 기여 방법
-
-1. 저장소 포크
-2. 기능 브랜치 생성 (`git checkout -b feature/amazing-feature`)
-3. 변경 사항 커밋 (`git commit -m 'Add some amazing feature'`)
-4. 브랜치 푸시 (`git push origin feature/amazing-feature`)
-5. Pull Request 생성
-
-## 라이센스
-
-[MIT](LICENSE) 
+MIT License 

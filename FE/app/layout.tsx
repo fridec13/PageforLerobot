@@ -5,10 +5,10 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: {
-    template: '%s | RoboSSAFYens',
-    default: 'RoboSSAFYens',
+    template: '%s | Robot Offset Simulator',
+    default: 'Robot Offset Simulator',
   },
-  description: 'Robot Community for SSAFYens',
+  description: '3D 로봇 모델을 통한 오프셋 시뮬레이션 도구',
 }
 
 interface RootLayoutProps {
