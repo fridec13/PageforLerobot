@@ -1,6 +1,6 @@
-# Robot Offset Simulator
+# SOARM100 3D 모델 뷰어
 
-3D 로봇 모델을 통한 오프셋 시뮬레이션 도구
+SOARM100 로봇 팔 3D 모델 뷰어
 
 ## 🤖 주요 기능
 
@@ -61,7 +61,7 @@ npm start
 ## 🎯 사용법
 
 1. 브라우저에서 `http://localhost:3000` 접속
-2. 자동으로 Offset Simulator로 리다이렉트
+2. 자동으로 SOARM100 3D 모델 뷰어로 리다이렉트
 3. 로봇 모델 추가/제거
 4. 슬라이더를 통해 관절 각도 조정
 5. 오프셋 값 설정 및 저장/불러오기
@@ -94,6 +94,14 @@ EXPOSE 3000
 CMD ["npm", "start"]
 ```
 
-## 📄 라이선스
+## 🙏 크레딧
 
-MIT License 
+이 프로젝트는 다음 URDF 모델을 사용합니다:
+
+### SO-100 Robot Arm ROS2 Package
+- **제작자**: Bruk G.
+- **원본 프로젝트**: [SO-100-arm](https://github.com/brukg/SO-100-arm)
+- **기반**: [SO-ARM100](https://github.com/TheRobotStudio/SO-ARM100) by The Robot Studio
+- **라이선스**: Apache License
+
+SO-100 5DOF 로봇 팔의 URDF 모델과 STL 메시 파일을 만들어주신신 Bruk G.님과 The Robot Studio에 감사드립니다.

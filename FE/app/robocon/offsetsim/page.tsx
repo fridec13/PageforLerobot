@@ -455,19 +455,43 @@ type Robot = {
   name: string;
   jointValues: number[];
   offsets: number[];
+  motorOffsets: number[]; // 각 관절별 모터 기준값 (기본값 2048)
   urdfPath?: string;
   urdfModel?: any;
 };
 
 export default function OffsetSimPage() {
+  // 각 관절의 모터값 범위와 각도 범위 정의
+  const motorConfig = [
+    { min: 909, max: 3229, angleMin: -124, angleMax: 124 }, // Base
+    { min: 819, max: 3217, angleMin: -102, angleMax: 102 }, // Shoulder Lift
+    { min: 867, max: 3104, angleMin: -100, angleMax: 90 },  // Elbow Flex
+    { min: 842, max: 3201, angleMin: -113, angleMax: 104 }, // Wrist Flex
+    { min: 260, max: 3880, angleMin: -180, angleMax: 180 }, // Wrist Roll
+    { min: 2044, max: 3532, angleMin: 0, angleMax: 100 }   // Gripper
+  ];
+
+  // 각도를 모터값으로 변환하는 함수
+  const angleToMotorValue = (angle: number, jointIndex: number, motorOffset: number = 2048) => {
+    const config = motorConfig[jointIndex];
+    const angleRange = config.angleMax - config.angleMin;
+    const motorRange = config.max - config.min;
+    const motorPerDegree = motorRange / angleRange;
+    
+    // 0도일 때의 모터값을 motorOffset로 설정
+    const zeroAngleMotorValue = motorOffset;
+    return Math.round(zeroAngleMotorValue + (angle * motorPerDegree));
+  };
+
   // 로봇 상태 관리
   const [robots, setRobots] = useState<Robot[]>([
     { 
       id: 1, 
       color: "orange", 
       name: "로봇 1",
-      jointValues: [0, 0, 0, 0, 0, 0], // 마지막 요소는 그리퍼 제어용
-      offsets: [0, 0, 0, 0, 0, 0]
+      jointValues: [0, 0, 0, 0, 0, 0], // 마지막 요소는 그리퍼 제어용 (완전닫힘)
+      offsets: [0, 0, 0, 0, 0, 0],
+      motorOffsets: [2048, 2048, 2048, 2048, 2048, 2048] // 각 관절별 모터 기준값
     }
   ]);
   
@@ -507,6 +531,22 @@ export default function OffsetSimPage() {
     );
   };
 
+  // 모터 오프셋 값 업데이트 핸들러
+  const updateMotorOffset = (robotId: number, offsetIndex: number, value: number) => {
+    setRobots(prev => 
+      prev.map(robot => 
+        robot.id === robotId 
+          ? {
+              ...robot,
+              motorOffsets: robot.motorOffsets.map(
+                (offsetValue, idx) => idx === offsetIndex ? value : offsetValue
+              )
+            }
+          : robot
+      )
+    );
+  };
+
   // 로봇 추가 함수
   const addRobot = () => {
     if (robots.length >= 4) return; // 최대 4개까지만 추가 가능
@@ -520,8 +560,9 @@ export default function OffsetSimPage() {
         id: newId, 
         color: colors[newId - 1], 
         name: `로봇 ${newId}`,
-        jointValues: [0, 0, 0, 0, 0, 0], // 마지막 요소는 그리퍼 제어용
-        offsets: [0, 0, 0, 0, 0, 0]
+        jointValues: [0, 0, 0, 0, 0, 0], // 마지막 요소는 그리퍼 제어용 (완전닫힘)
+        offsets: [0, 0, 0, 0, 0, 0],
+        motorOffsets: [2048, 2048, 2048, 2048, 2048, 2048] // 각 관절별 모터 기준값
       }
     ]);
   };
@@ -554,8 +595,16 @@ export default function OffsetSimPage() {
   const resetSettings = () => {
     setRobots(robots.map(robot => ({
       ...robot,
-      jointValues: [0, 0, 0, 0, 0, 0],
+      jointValues: [0, 0, 0, 0, 0, 0], // 그리퍼는 완전닫힘 상태로 초기화
       offsets: [0, 0, 0, 0, 0, 0]
+    })));
+  };
+
+  // Rest Position으로 설정
+  const setRestPosition = () => {
+    setRobots(robots.map(robot => ({
+      ...robot,
+      jointValues: [0, -102, 90, 71, 0, 0] // Rest Position 각도
     })));
   };
 
@@ -572,13 +621,38 @@ export default function OffsetSimPage() {
 
   // 관절 이름 배열 (UI 표시용)
   const jointNames = [
-    "Shoulder Rotation", 
-    "Shoulder Pitch", 
-    "Elbow", 
-    "Wrist Pitch", 
+    "Base / Shoulder Pan", 
+    "Shoulder Lift", 
+    "Elbow Flex", 
+    "Wrist Flex", 
     "Wrist Roll",
     "Gripper"
   ];
+
+  // 슬라이더 휠 이벤트 핸들러
+  const handleSliderWheel = (e: React.WheelEvent, robotId: number, jointIndex: number) => {
+    e.preventDefault(); // 페이지 스크롤 방지
+    
+    const robot = robots.find(r => r.id === robotId);
+    if (!robot) return;
+    
+    const currentValue = robot.jointValues[jointIndex];
+    const delta = e.deltaY > 0 ? -1 : 1; // 아래로 스크롤하면 값 감소, 위로 스크롤하면 값 증가
+    
+    let newValue = currentValue + delta;
+    
+    // 각 관절별 범위 제한
+    let min = -180, max = 180;
+    if (jointIndex === 0) { min = -124; max = 124; }
+    else if (jointIndex === 1) { min = -102; max = 102; }
+    else if (jointIndex === 2) { min = -100; max = 90; }
+    else if (jointIndex === 3) { min = -113; max = 104; }
+    else if (jointIndex === 5) { min = 0; max = 100; }
+    
+    newValue = Math.max(min, Math.min(max, newValue));
+    
+    updateJointValue(robotId, jointIndex, newValue);
+  };
 
   // 모델 로딩 상태 확인 함수
   const isModelLoading = () => {
@@ -588,7 +662,16 @@ export default function OffsetSimPage() {
   return (
     <div className="h-full">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Offset 시뮬레이션 - SO-100 로봇 팔</h1>
+        <div>
+          <p className="text-sm text-gray-600">
+            SO-100 5DOF 로봇 팔 시뮬레이션 | 
+            <span className="ml-1 text-blue-600">
+              <a href="https://github.com/brukg/SO-100-arm" target="_blank" rel="noopener noreferrer" className="hover:underline">
+                URDF 모델: Bruk G.
+              </a>
+            </span>
+          </p>
+        </div>
         <div className="flex space-x-2">
           <Button 
             onClick={addRobot} 
@@ -607,6 +690,7 @@ export default function OffsetSimPage() {
             설정 저장
           </Button>
           <Button variant="outline" onClick={resetSettings}>초기화</Button>
+          <Button variant="outline" onClick={setRestPosition} className="bg-green-50">Rest Position</Button>
         </div>
       </div>
 
@@ -633,10 +717,11 @@ export default function OffsetSimPage() {
                     <Button 
                       size="sm" 
                       variant="ghost" 
-                      className="h-6 w-6 p-0" 
+                      className="flex items-center gap-1 h-8 px-2" 
                       onClick={() => removeRobot(robot.id)}
                     >
                       <Trash2 className="h-4 w-4 text-red-500" />
+                      <span className="text-xs text-red-500">로봇 삭제</span>
                     </Button>
                   )}
                 </div>
@@ -656,7 +741,22 @@ export default function OffsetSimPage() {
                   <SO100ArmModel 
                     color={robot.color}
                     jointValues={robot.jointValues.map(
-                      (val, idx) => val + robot.offsets[idx]
+                      (val, idx) => {
+                        let adjustedVal = val + robot.offsets[idx];
+                        // Wrist Flex (index 3)의 경우 -90도를 기준점으로 설정
+                        if (idx === 3) {
+                          adjustedVal -= 90;
+                        }
+                        // Wrist Roll (index 4)의 경우 +90도를 기준점으로 설정
+                        if (idx === 4) {
+                          adjustedVal += 90;
+                        }
+                        // Gripper (index 5)의 경우 -10도를 기준점으로 설정
+                        if (idx === 5) {
+                          adjustedVal -= 10;
+                        }
+                        return adjustedVal;
+                      }
                     )}
                   />
                   
@@ -669,79 +769,117 @@ export default function OffsetSimPage() {
               </div>
             </div>
             
-            {/* 관절 제어 영역 (오른쪽) */}
-            <div className="w-48 p-3 border-l bg-gray-50 overflow-y-auto">
-              <div className="mb-3">
-                <h3 className="text-sm font-medium mb-2">{robot.name} 관절 제어</h3>
-                <div className="space-y-4">
+            {/* 관절 제어 영역 (오른쪽) - 2컬럼 레이아웃 */}
+            <div className="w-80 border-l bg-gray-50 flex flex-col">
+              <h3 className="text-sm font-medium p-3 pb-2 border-b bg-gray-50">{robot.name} 관절 제어</h3>
+              
+              {/* 2컬럼 레이아웃 - 고정 높이 */}
+              <div className="flex flex-1 overflow-hidden">
+                
+                {/* 왼쪽 컬럼: 슬라이더 제어 - 고정 */}
+                <div className="w-1/2 p-3 space-y-4 bg-gray-50">
+                  <h4 className="text-xs font-medium text-gray-700 border-b pb-1">관절 제어</h4>
+                  
                   {jointNames.slice(0, 5).map((name, idx) => (
                     <div key={idx}>
                       <label className="block text-xs font-medium mb-1">
                         {name}: {robot.jointValues[idx]}°
                       </label>
-                      <Slider 
-                        value={[robot.jointValues[idx]]} 
-                        min={-180} 
-                        max={180} 
-                        step={1} 
-                        onValueChange={(vals) => updateJointValue(robot.id, idx, vals[0])}
-                      />
+                      <div 
+                        onWheel={(e) => handleSliderWheel(e, robot.id, idx)}
+                        className="cursor-pointer"
+                      >
+                        <Slider 
+                          value={[robot.jointValues[idx]]} 
+                          min={idx === 0 ? -124 : idx === 1 ? -102 : idx === 2 ? -100 : idx === 3 ? -113 : -180} 
+                          max={idx === 0 ? 124 : idx === 1 ? 102 : idx === 2 ? 90 : idx === 3 ? 104 : 180} 
+                          step={1} 
+                          onValueChange={(vals) => updateJointValue(robot.id, idx, vals[0])}
+                        />
+                      </div>
                     </div>
                   ))}
                   
-                  {/* 그리퍼 제어 (열기/닫기) */}
+                  {/* 그리퍼 제어 */}
                   <div>
                     <label className="block text-xs font-medium mb-1">
-                      그리퍼: {robot.jointValues[5] === -10 ? "완전닫힘" : robot.jointValues[5] === 90 ? "완전열림" : `${robot.jointValues[5]}°`}
+                      그리퍼: {robot.jointValues[5] === 0 ? "완전닫힘" : robot.jointValues[5] === 100 ? "완전열림" : `${robot.jointValues[5]}°`}
                     </label>
-                    <Slider 
-                      value={[robot.jointValues[5]]} 
-                      min={-10} 
-                      max={90} 
-                      step={1}
-                      onValueChange={(vals) => updateJointValue(robot.id, 5, vals[0])}
-                    />
-                    {/* 그리퍼 빠른 제어 버튼 */}
-                    <div className="flex gap-2 mt-1">
-                      <Button size="sm" variant="outline" className="text-xs flex-1 h-7"
-                        onClick={() => updateJointValue(robot.id, 5, -10)}>
+                    <div 
+                      onWheel={(e) => handleSliderWheel(e, robot.id, 5)}
+                      className="cursor-pointer"
+                    >
+                      <Slider 
+                        value={[robot.jointValues[5]]} 
+                        min={0} 
+                        max={100} 
+                        step={1}
+                        onValueChange={(vals) => updateJointValue(robot.id, 5, vals[0])}
+                      />
+                    </div>
+                    <div className="flex gap-1 mt-1">
+                      <Button size="sm" variant="outline" className="text-xs flex-1 h-6 py-0"
+                        onClick={() => updateJointValue(robot.id, 5, 0)}>
                         닫기
                       </Button>
-                      <Button size="sm" variant="outline" className="text-xs flex-1 h-7"
-                        onClick={() => updateJointValue(robot.id, 5, 90)}>
+                      <Button size="sm" variant="outline" className="text-xs flex-1 h-6 py-0"
+                        onClick={() => updateJointValue(robot.id, 5, 100)}>
                         열기
                       </Button>
                     </div>
                   </div>
                 </div>
-              </div>
-              
-              <div className="pt-3 border-t">
-                <h3 className="text-xs font-medium mb-2">Offset 값</h3>
-                <div className="space-y-2">
-                  {jointNames.map((name, idx) => (
-                    <div key={idx}>
-                      <label className="block text-xs mb-1">{name} Offset</label>
-                      <input 
-                        type="number" 
-                        className="w-full border rounded px-2 py-1 text-sm" 
-                        value={robot.offsets[idx]} 
-                        onChange={(e) => updateOffset(robot.id, idx, Number(e.target.value))}
-                      />
-                    </div>
-                  ))}
+                
+                {/* 오른쪽 컬럼: Offset & 모터값 - 스크롤 가능 */}
+                <div className="w-1/2 border-l border-gray-200 overflow-y-auto">
+                  <div className="p-3 space-y-3">
+                    <h4 className="text-xs font-medium text-gray-700 border-b pb-1 sticky top-0 bg-gray-50">Offset & 모터값</h4>
+                  
+                  {jointNames.map((name, idx) => {
+                    const currentMotorValue = angleToMotorValue(
+                      robot.jointValues[idx] + robot.offsets[idx], 
+                      idx, 
+                      robot.motorOffsets[idx]
+                    );
+                    const config = motorConfig[idx];
+                    
+                    return (
+                      <div key={idx} className="bg-white p-2 rounded border text-xs">
+                        <label className="block font-medium mb-1 text-gray-800">{name.split(' / ')[0]}</label>
+                        
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-600 text-xs whitespace-nowrap">모터값:</span>
+                            <div className="flex-1 min-w-0 border rounded px-1 py-0.5 text-xs bg-blue-50 font-mono font-bold text-blue-700">
+                              {currentMotorValue}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-600 text-xs whitespace-nowrap">모터 기준:</span>
+                            <input 
+                              type="number" 
+                              className="flex-1 min-w-0 border rounded px-1 py-0.5 text-xs" 
+                              value={robot.motorOffsets[idx]} 
+                              onChange={(e) => updateMotorOffset(robot.id, idx, Number(e.target.value))}
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="text-xs text-gray-500 mt-1 pt-1 border-t">
+                          <div>범위: {config.min} ~ {config.max}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  </div>
                 </div>
+                
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="mt-4 flex justify-start">
-        <Link href="/robocon" className="text-blue-600 hover:underline">
-          ← 로보콘 메뉴로 돌아가기
-        </Link>
-      </div>
     </div>
   )
 } 

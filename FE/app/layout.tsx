@@ -5,10 +5,10 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: {
-    template: '%s | Robot Offset Simulator',
-    default: 'Robot Offset Simulator',
+    template: '%s | SOARM100 3D 모델 뷰어',
+    default: 'SOARM100 3D 모델 뷰어',
   },
-  description: '3D 로봇 모델을 통한 오프셋 시뮬레이션 도구',
+  description: 'SOARM100 로봇 팔 3D 모델 뷰어',
 }
 
 interface RootLayoutProps {

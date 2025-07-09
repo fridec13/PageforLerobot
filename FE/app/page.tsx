@@ -11,7 +11,7 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    // 3초 후 자동으로 offset sim으로 리다이렉트
+    // 3초 후 자동으로 3D 모델 뷰어로 리다이렉트
     const timer = setTimeout(() => {
       router.push('/robocon/offsetsim')
     }, 3000)
@@ -27,10 +27,10 @@ export default function Home() {
             <Cpu className="h-8 w-8" />
           </div>
           <CardTitle className="text-2xl font-bold text-gray-900">
-            Robot Offset Simulator
+            SOARM100 3D 모델 뷰어
           </CardTitle>
           <CardDescription className="text-gray-600">
-            3D 로봇 모델을 통한 오프셋 시뮬레이션 도구
+            SOARM100 로봇 팔 3D 모델 뷰어
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center space-y-4">
@@ -43,7 +43,7 @@ export default function Home() {
           <div className="pt-4">
             <Button asChild className="w-full bg-blue-500 hover:bg-blue-600">
               <Link href="/robocon/offsetsim" className="flex items-center justify-center">
-                지금 시작하기
+                3D 모델 뷰어 시작하기
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>

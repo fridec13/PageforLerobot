@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Cpu, Github, FileText } from "lucide-react"
+import { Cpu, Github } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface HeaderProps {
@@ -17,14 +17,14 @@ export function Header({ isMobileOpen, setIsMobileOpen }: HeaderProps) {
           <div className="bg-blue-500 text-white rounded-lg p-2 mr-3">
             <Cpu className="h-6 w-6" />
           </div>
-          <span className="text-foreground">Robot Offset Simulator</span>
+          <span className="text-foreground">SOARM100 3D 모델 뷰어</span>
         </Link>
       </div>
       
       <div className="flex items-center space-x-2">
         <Button variant="ghost" size="sm" asChild>
           <a 
-            href="https://github.com" 
+            href="https://github.com/fridec13/PageforLerobot/tree/offset-sim-standalone" 
             target="_blank" 
             rel="noopener noreferrer"
             className="flex items-center gap-2"
@@ -32,13 +32,6 @@ export function Header({ isMobileOpen, setIsMobileOpen }: HeaderProps) {
             <Github className="h-4 w-4" />
             <span className="hidden md:inline">GitHub</span>
           </a>
-        </Button>
-        
-        <Button variant="ghost" size="sm" asChild>
-          <Link href="/robocon/offsetsim" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            <span className="hidden md:inline">시뮬레이터</span>
-          </Link>
         </Button>
       </div>
     </header>
