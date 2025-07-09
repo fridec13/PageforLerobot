@@ -1,23 +1,12 @@
 "use client"
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Cpu, ArrowRight } from "lucide-react"
 import Link from "next/link"
 
 export default function Home() {
-  const router = useRouter()
-
-  useEffect(() => {
-    // 3초 후 자동으로 3D 모델 뷰어로 리다이렉트
-    const timer = setTimeout(() => {
-      router.push('/robocon/offsetsim')
-    }, 3000)
-
-    return () => clearTimeout(timer)
-  }, [router])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -33,14 +22,8 @@ export default function Home() {
             SOARM100 로봇 팔 3D 모델 뷰어
           </CardDescription>
         </CardHeader>
-        <CardContent className="text-center space-y-4">
-          <p className="text-sm text-gray-500">
-            3초 후 자동으로 이동됩니다...
-          </p>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div className="bg-blue-500 h-2 rounded-full animate-pulse w-1/3"></div>
-          </div>
-          <div className="pt-4">
+        <CardContent className="text-center">
+          <div>
             <Button asChild className="w-full bg-blue-500 hover:bg-blue-600">
               <Link href="/robocon/offsetsim" className="flex items-center justify-center">
                 3D 모델 뷰어 시작하기

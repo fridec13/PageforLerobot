@@ -6,7 +6,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import { OrbitControls, Environment, useGLTF } from "@react-three/drei"
 import { Slider } from "@/components/ui/slider"
 import { Button } from "@/components/ui/button"
-import { Plus, Trash2, FileDown, Upload } from "lucide-react"
+import { Plus, Trash2, Upload } from "lucide-react"
 import * as THREE from 'three'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 // URDF 로더 라이브러리 가져오기
@@ -576,20 +576,7 @@ export default function OffsetSimPage() {
     }
   };
 
-  // 설정 저장
-  const saveSettings = () => {
-    const data = JSON.stringify(robots, null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'robot_settings.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+
 
   // 설정 초기화
   const resetSettings = () => {
@@ -661,7 +648,7 @@ export default function OffsetSimPage() {
 
   return (
     <div className="h-full">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-4 mt-6">
         <div>
           <p className="text-sm text-gray-600">
             SO-100 5DOF 로봇 팔 시뮬레이션 | 
@@ -682,13 +669,7 @@ export default function OffsetSimPage() {
             <Plus className="h-4 w-4 mr-1" />
             로봇 추가
           </Button>
-          <Button 
-            className="flex items-center bg-blue-600"
-            onClick={saveSettings}
-          >
-            <FileDown className="h-4 w-4 mr-1" />
-            설정 저장
-          </Button>
+
           <Button variant="outline" onClick={resetSettings}>초기화</Button>
           <Button variant="outline" onClick={setRestPosition} className="bg-green-50">Rest Position</Button>
         </div>
@@ -696,7 +677,7 @@ export default function OffsetSimPage() {
 
       <div className="mb-4 text-sm">
         <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-700">
-          <p><strong>정보:</strong> STL 모델을 불러오고 있습니다. 모델 크기가 크므로 로드에 시간이 걸릴 수 있습니다. 스케일을 4.0으로 설정하여 모델이 잘 보이도록 했습니다.</p>
+          <p><strong>스케일:</strong> 4.0 (3D 모델 표시용)</p>
         </div>
       </div>
 
