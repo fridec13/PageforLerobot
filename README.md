@@ -1,3 +1,111 @@
-# 오픈소스 LeRobot 활용 E2E 로봇 제어
+# SOARM100 3D 모델 뷰어
 
- 오픈소스 LeRobot 프로젝트를 활용하여 SO100ARM 모델의 E2E 제어를 수행한다. 리더, 팔로워 한 쌍으로 이뤄진 SO100ARM 모델은 리더의 움직임을 팔로워가 따라하는 모방학습용 로봇으로 한 쌍의 로봇으로는 Pick and Place 움직임으로 한정되기에 이번 프로젝트에서는 두 쌍의 SO100ARM 로봇을 사용하여 양팔로 할 수 있는 작업을 모방하고 각각의 태스크에 따른 policy을 만들어 하나의 로봇이 여러 태스크를 모델에 따라 수행할 수 있도록 한다.
+SOARM100 로봇 팔 3D 모델 뷰어
+
+## 🌐 라이브 데모
+
+**[👉 SOARM100 3D 모델 뷰어 체험하기](https://soarm100viewer.vercel.app/)**
+
+## 🤖 주요 기능
+
+- **3D 로봇 시뮬레이션**: URDF 파일을 통한 실시간 로봇 모델 렌더링
+- **관절 제어**: 각 관절의 개별적인 각도 조정 및 오프셋 설정
+- **다중 로봇 지원**: 여러 로봇을 동시에 시뮬레이션
+- **직관적인 UI**: 슬라이더를 통한 쉬운 조작
+
+## 🛠️ 기술 스택
+
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **3D 렌더링**: Three.js, React Three Fiber, React Three Drei
+- **로봇 모델**: URDF Loader, STL Loader
+- **UI 컴포넌트**: Radix UI, Tailwind CSS
+- **스타일링**: Tailwind CSS
+
+## 🚀 시작하기
+
+### 설치
+
+```bash
+cd ./FE/
+npm install
+```
+
+### 개발 서버 실행
+
+```bash
+npm run dev
+```
+
+### 프로덕션 빌드
+
+```bash
+npm run build
+npm start
+```
+
+## 📁 프로젝트 구조
+
+```
+├── app/                          # Next.js App Router
+│   ├── robocon/offsetsim/        # Offset Simulator 페이지
+│   │   ├── page.tsx              # 메인 시뮬레이터
+│   │   └── stlloaderpage.tsx     # STL 로더
+│   ├── layout.tsx                # 루트 레이아웃
+│   └── page.tsx                  # 홈 페이지
+├── components/                   # React 컴포넌트
+│   ├── layout/                   # 레이아웃 컴포넌트
+│   └── ui/                       # UI 컴포넌트
+├── lib/                          # 유틸리티 라이브러리
+│   ├── urdf-loader/              # URDF 로더 라이브러리
+│   └── utils.ts                  # 유틸리티 함수
+└── public/                       # 정적 파일
+    └── models/                   # 3D 모델 파일들
+```
+
+## 🎯 사용법
+
+1. 브라우저에서 `http://localhost:3000` 접속
+2. 자동으로 SOARM100 3D 모델 뷰어로 리다이렉트
+3. 로봇 모델 추가/제거
+4. 슬라이더를 통해 관절 각도 조정
+5. 오프셋 값 설정 및 저장/불러오기
+
+## 📋 지원 모델
+
+- SO-100 5DOF 로봇 팔
+- 표준 URDF 형식 모델
+- STL 메시 파일
+
+## 🌐 배포
+
+### Vercel 배포
+
+```bash
+npm install -g vercel
+vercel
+```
+
+### Docker 배포
+
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+EXPOSE 3000
+CMD ["npm", "start"]
+```
+
+## 🙏 크레딧
+
+이 프로젝트는 다음 URDF 모델을 사용합니다:
+
+### SO-100 Robot Arm ROS2 Package
+- **제작자**: Bruk G.
+- **원본 프로젝트**: [SO-100-arm](https://github.com/brukg/SO-100-arm)
+- **기반**: [SO-ARM100](https://github.com/TheRobotStudio/SO-ARM100) by The Robot Studio
+- **라이선스**: Apache License
+
+SO-100 5DOF 로봇 팔의 URDF 모델과 STL 메시 파일을 만들어주신신 Bruk G.님과 The Robot Studio에 감사드립니다.
